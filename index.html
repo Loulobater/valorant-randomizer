@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10131b">
+<title>Roulette Agent Valorant</title>
+<style>
+:root{--bg:#090c12;--panel:#131824;--panel2:#1a2030;--line:#293243;--muted:#8c97aa;--red:#ff4655;--cyan:#25e6d0;--text:#f4f6fb;--gold:#f4c56a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0%,#29151e 0,transparent 42%),linear-gradient(135deg,#090c12,#10141d 60%,#0a0d14);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;min-height:100vh}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:linear-gradient(#394354 1px,transparent 1px),linear-gradient(90deg,#394354 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 90%)}
+header{position:relative;padding:24px 3vw 20px;border-bottom:1px solid #252d3a;display:flex;align-items:end;justify-content:space-between;gap:20px}
+.kicker{font:11px/1.4 Consolas,monospace;letter-spacing:4px;color:#ff6975;text-transform:uppercase}.brand{font-size:clamp(28px,4.4vw,54px);font-weight:1000;letter-spacing:-2.5px;line-height:1}.brand span{color:var(--red)}.stats{font:11px Consolas,monospace;color:#aab2c0;letter-spacing:1px;white-space:nowrap}
+main{position:relative;display:grid;grid-template-columns:minmax(260px,1fr) minmax(360px,1.65fr) minmax(250px,.78fr);gap:22px;padding:28px 2.3vw;max-width:1800px;margin:auto}
+.panel{background:rgba(19,24,36,.94);border:1px solid #273143;box-shadow:0 18px 40px #0005;min-width:0}.panel-head{padding:19px 18px 13px;display:flex;justify-content:space-between;align-items:end}.section-no{font:11px Consolas,monospace;letter-spacing:3px;color:var(--red);margin-bottom:6px}.section-no.cyan{color:var(--cyan)}h2{margin:0;font-size:22px;letter-spacing:-.6px}.count{font:12px Consolas,monospace;color:#aab2c0}
+input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:white;border:1px solid #2b3545;padding:12px;border-radius:4px;outline:none}input[type=text]:focus{border-color:var(--cyan)}button{cursor:pointer;border:1px solid #354052;background:#171e2b;color:#f5f7fb;padding:9px 12px;border-radius:4px;font-weight:650;transition:.16s}button:hover{filter:brightness(1.2);transform:translateY(-1px)}button.primary{background:var(--red);border-color:var(--red);color:white}button.cyan{background:#123936;border-color:#1a897e;color:var(--cyan)}button.ghost{background:transparent}
+.addrow{display:flex;gap:7px;padding:0 16px 14px}.addrow input{flex:1;width:100%}
+.players{padding:0 12px 14px;display:grid;gap:7px}.player{background:#1a2030;border-left:2px solid var(--red);padding:11px 10px;display:grid;grid-template-columns:20px 1fr auto;gap:8px;align-items:center}.player input{accent-color:var(--red);width:17px;height:17px}.player-main{min-width:0}.player-name{font-weight:750;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mini-agents{display:flex;gap:3px;margin-top:7px;align-items:center;min-height:22px}.mini-agents img{width:23px;height:23px;object-fit:cover;border-radius:3px;background:#303849}.mini-agents small{font-size:10px;color:var(--muted)}.player-actions{display:flex;gap:5px}.player-actions button{padding:6px 8px;font-size:11px}.delete{color:#aeb7c5}
+.center{display:flex;flex-direction:column;gap:15px}.mode-tabs{display:flex;gap:8px}.mode-tabs button{flex:1;padding:13px 8px;letter-spacing:1px;font-size:12px}.mode-tabs button.active.custom{background:var(--red);border-color:var(--red)}.mode-tabs button.active.velocity{background:#123936;border-color:var(--cyan);color:var(--cyan)}
+.hero{border:1px solid #293342;background:linear-gradient(180deg,#192330,#10151e);min-height:260px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:end}.hero-art{position:absolute;inset:0 0 40% 0;background:linear-gradient(0deg,#10151e,transparent 60%),url('https://media.valorant-api.com/maps/2c9d57ec-4431-9c5e-2939-8f9ef6dd5cba/splash.png') center 42%/cover;opacity:.72}.hero-copy{position:relative;padding:20px}.hero-label{font:11px Consolas,monospace;letter-spacing:3px;color:var(--cyan)}.hero h1{font-size:clamp(34px,5vw,50px);margin:2px 0 0;letter-spacing:-2px;text-transform:uppercase}.hero.velocity-hero .hero-label{color:var(--cyan)}.hero.velocity-hero .hero-art{background:linear-gradient(0deg,#10151e,transparent 60%),radial-gradient(ellipse at 50% 10%,#0b7770,#111723 70%)}.actions{display:flex;gap:10px}.actions .roll{flex:1;min-height:52px;font-size:15px;letter-spacing:1px}.actions .copy{white-space:nowrap}.subline{font:11px Consolas,monospace;color:#8d97a8}
+.results{display:grid;grid-template-columns:1fr 1fr;gap:12px}.team{background:#190f18;border:1px solid #612c3a;padding:13px;min-height:260px}.team.b{background:#0b1b1d;border-color:#176d68}.team h3{font-size:17px;margin:0 0 12px;color:var(--red)}.team.b h3{color:var(--cyan)}.team-count{float:right;font:10px Consolas,monospace;color:#aab2c0;font-weight:400}.member{display:grid;grid-template-columns:54px 1fr auto;gap:9px;align-items:center;padding:9px 0;border-top:1px solid #ffffff12}.member img{width:54px;height:54px;object-fit:cover;background:#252c3b;border:1px solid #485164}.member strong{font-size:13px;display:block}.member span{font:11px Consolas,monospace;color:#ff8992;display:block;margin-top:4px}.team.b .member span{color:var(--cyan)}.role{font:9px Consolas,monospace;color:#b7c3ce;border:1px solid #3d5260;padding:4px 5px;text-transform:uppercase}
+.map-pool{padding:0 14px 16px}.map-buttons{display:flex;gap:6px;margin-bottom:12px}.map-buttons button{font-size:11px;padding:7px 9px}.maps{display:grid;grid-template-columns:1fr 1fr;gap:7px}.map-tile{height:64px;position:relative;overflow:hidden;border:1px solid #354253;background:#202837;padding:0;text-align:left}.map-tile img{width:100%;height:100%;object-fit:cover;opacity:.62;position:absolute;inset:0}.map-tile:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#0b1019bb,transparent)}.map-tile span{position:absolute;z-index:1;left:9px;bottom:9px;font-size:11px;font-weight:850;letter-spacing:.4px}.map-tile i{position:absolute;z-index:2;right:8px;top:8px;width:15px;height:15px;border:1px solid #c0c8d2;background:#1118}.map-tile.selected{border-color:var(--cyan)}.map-tile.selected i{background:var(--cyan);border-color:var(--cyan)}.map-tile.selected i:after{content:"✓";font-style:normal;color:#071514;font-size:12px;position:absolute;left:2px;top:-1px}
+.modal{position:fixed;inset:0;background:#05070bd9;z-index:5;display:none;align-items:center;justify-content:center;padding:16px}.modal.open{display:flex}.dialog{width:min(900px,100%);max-height:90vh;overflow:auto;background:#141b28;border:1px solid #39465b;box-shadow:0 20px 80px #000;padding:20px}.dialog-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.dialog h2{font-size:21px}.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.filters button{font-size:11px}.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px}.agent-card{background:#1b2331;border:1px solid #354154;padding:6px;cursor:pointer;text-align:center;min-width:0}.agent-card.selected{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}.agent-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#252d3d}.agent-card strong{display:block;font-size:11px;margin:5px 0 2px}.agent-card small{font-size:9px;color:var(--muted)}
+.error{background:#35151d;border:1px solid #a93648;color:#ffb5bd;padding:12px;font-size:13px;display:none}.error.show{display:block}.notice{font-size:11px;color:var(--muted);padding:0 16px 12px}.footer{padding:0 3vw 22px;color:#7d899c;font:10px Consolas,monospace;position:relative}
+@media(max-width:1100px){main{grid-template-columns:minmax(250px,.85fr) minmax(340px,1.4fr)}.maps-panel{grid-column:1/-1}.maps{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:700px){header{align-items:flex-start;flex-direction:column}.stats{white-space:normal}main{display:flex;flex-direction:column;padding:15px;gap:14px}.center{order:-1}.hero{min-height:200px}.results{grid-template-columns:1fr}.maps{grid-template-columns:repeat(2,1fr)}.actions{flex-direction:column}.actions .copy{min-height:44px}.player{grid-template-columns:20px 1fr auto}.mode-tabs button{font-size:10px}.team{min-height:unset}}
+</style>
+</head>
+<body>
+<header><div><div class="kicker">PROTOCOLE // TIRAGE ALÉATOIRE</div><div class="brand">ROULETTE<span>AGENT</span> VALORANT</div></div><div class="stats"><span id="agentStat">AGENTS —</span> &nbsp; <span id="mapStat">CARTES —</span></div></header>
+<main>
+<section class="panel">
+ <div class="panel-head"><div><div class="section-no">01 // ESCOUADE</div><h2>JOUEURS</h2></div><div class="count" id="playerCount">0/10 actifs</div></div>
+ <div class="addrow"><input id="newPlayer" type="text" maxlength="22" placeholder="Pseudo du joueur"><button class="primary" id="addPlayer">＋ Ajouter</button></div>
+ <div class="players" id="players"></div>
+ <div class="notice">Les cases cochées sont partagées entre les deux modes.</div>
+</section>
+<section class="center">
+ <div class="mode-tabs"><button class="active custom" id="customTab">⚔ PERSONNALISÉ</button><button class="velocity" id="velocityTab">ϟ VÉLOCITÉ / NON CLASSÉ</button></div>
+ <div class="hero" id="hero"><div class="hero-art" id="heroArt"></div><div class="hero-copy"><div class="hero-label" id="heroLabel">CARTE TIRÉE</div><h1 id="heroTitle">PRÊT ?</h1></div></div>
+ <div class="actions"><button class="primary roll" id="roll">⟳ LANCER LE TIRAGE</button><button class="copy" id="copy">▢ Copier pour Discord</button></div>
+ <div class="subline" id="subline">Sélectionne les joueurs et leurs agents pour commencer.</div>
+ <div class="error" id="error"></div>
+ <div class="results" id="results"></div>
+</section>
+<section class="panel maps-panel" id="mapsPanel">
+ <div class="panel-head"><div><div class="section-no cyan">02 // TERRAIN</div><h2>POOL DE CARTES</h2></div><div class="count" id="mapCount">0/0</div></div>
+ <div class="map-pool"><div class="map-buttons"><button id="allMaps">Tout cocher</button><button id="noMaps">Tout décocher</button></div><div class="maps" id="maps"></div></div>
+</section>
+</main>
+<div class="footer">FAN PROJECT // DONNÉES DE JEU FOURNIES PAR VALORANT-API.COM · NON AFFILIÉ À RIOT GAMES</div>
+<div class="modal" id="agentModal"><div class="dialog"><div class="dialog-head"><div><div class="section-no cyan">ARSENAL // SÉLECTION</div><h2 id="modalTitle">AGENTS DE JOUEUR</h2></div><button id="closeModal">✕ Fermer</button></div><div class="filters" id="roleFilters"></div><div class="filters"><button id="allAgents">Tous</button><button id="noAgents">Aucun</button></div><div class="agent-grid" id="agentGrid"></div></div></div>
+<script>
+const API='https://valorant-api.com/v1';
+const STORAGE='valorant-randomizer-v1';
+const DEFAULT_MAPS=['Abyss','Ascent','Bind','Breeze','Corrode','Fracture','Haven','Icebox','Lotus','Pearl','Split','Summit','Sunset'];
+const ROLE_ORDER=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
+let agents=[],maps=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode}));}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);mode=d.mode==='velocity'?'velocity':'custom';}catch(e){players=[];}}
+function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
+function playable(a){return a.isPlayableCharacter!==false && a.role && a.displayIcon}
+async function loadData(){
+ $('subline').textContent='Chargement des agents et des cartes…';
+ try{
+  const [ar,mr]=await Promise.all([fetch(API+'/agents?isPlayableCharacter=true&language=en-US'),fetch(API+'/maps?language=en-US')]);
+  if(!ar.ok||!mr.ok)throw new Error('API indisponible');
+  const [aj,mj]=await Promise.all([ar.json(),mr.json()]);
+  agents=(aj.data||[]).filter(playable).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));
+  const all=(mj.data||[]).filter(m=>m.displayName&&m.splash);
+  maps=DEFAULT_MAPS.map(n=>all.find(m=>m.displayName.toLowerCase()===n.toLowerCase())).filter(Boolean);
+  if(!maps.length)maps=all.filter(m=>!['The Range','Basic Training','District','Kasbah','Piazza','Drift','Glitch','HURM'].includes(m.displayName));
+  if(!hasSavedMapSelection){selectedMaps=new Set(maps.map(m=>m.uuid));hasSavedMapSelection=true;}
+  const valid=new Set(maps.map(m=>m.uuid));selectedMaps=new Set([...selectedMaps].filter(x=>valid.has(x)));
+  $('agentStat').textContent=agents.length+' AGENTS';$('mapStat').textContent=maps.length+' CARTES';
+  $('subline').textContent='Données actualisées automatiquement depuis Valorant-API.';
+ }catch(e){
+  $('subline').textContent='Impossible de charger les données Valorant. Vérifie ta connexion puis actualise la page.';
+  $('error').textContent='Les agents et cartes ne sont pas accessibles pour le moment.';$('error').classList.add('show');
+ }
+ render();
+}
+function renderPlayers(){
+ $('players').innerHTML='';
+ players.forEach(p=>{
+  const active=p.active!==false;
+  const chosen=agents.filter(a=>(p.agents||[]).includes(a.uuid));
+  const row=document.createElement('div');row.className='player';
+  row.innerHTML=`<input type="checkbox" aria-label="Faire participer ${esc(p.name)}" ${active?'checked':''}><div class="player-main"><div class="player-name">${esc(p.name)}</div><div class="mini-agents">${chosen.slice(0,7).map(a=>`<img src="${a.displayIcon}" title="${esc(a.displayName)}">`).join('')}${chosen.length>7?`<small>+${chosen.length-7}</small>`:''}${chosen.length===0?'<small>Aucun agent sélectionné</small>':''}</div></div><div class="player-actions"><button class="agents-btn">⚔ Agents</button><button class="delete ghost" title="Supprimer">♧</button></div>`;
+  row.querySelector('input').onchange=e=>{p.active=e.target.checked;save();renderCount();};
+  row.querySelector('.agents-btn').onclick=()=>openAgents(p.id);
+  row.querySelector('.delete').onclick=()=>{if(confirm('Supprimer '+p.name+' ?')){players=players.filter(x=>x.id!==p.id);save();render();}};
+  $('players').appendChild(row);
+ });
+ renderCount();
+}
+function renderCount(){
+ const n=players.filter(p=>p.active!==false).length;
+ $('playerCount').textContent=n+'/10 actifs';
+ $('playerCount').style.color=mode==='velocity'&&n>5?'#ff5968':'';
+}
+function renderMaps(){
+ $('maps').innerHTML='';
+ maps.forEach(m=>{
+  const b=document.createElement('button');b.className='map-tile'+(selectedMaps.has(m.uuid)?' selected':'');
+  b.innerHTML=`<img src="${m.splash}" alt=""><span>${esc(m.displayName.toUpperCase())}</span><i></i>`;
+  b.onclick=()=>{selectedMaps.has(m.uuid)?selectedMaps.delete(m.uuid):selectedMaps.add(m.uuid);save();renderMaps();};
+  $('maps').appendChild(b);
+ });
+ $('mapCount').textContent=selectedMaps.size+'/'+maps.length;
+}
+function renderMode(){
+ $('customTab').classList.toggle('active',mode==='custom');$('customTab').classList.toggle('custom',mode==='custom');
+ $('velocityTab').classList.toggle('active',mode==='velocity');$('velocityTab').classList.toggle('velocity',mode==='velocity');
+ $('mapsPanel').style.display=mode==='custom'?'block':'none';
+ $('hero').classList.toggle('velocity-hero',mode==='velocity');
+ $('heroLabel').textContent=mode==='custom'?'CARTE TIRÉE':'MODE VÉLOCITÉ // ÉQUIPE UNIQUE';
+ if(!lastResult){$('heroTitle').textContent=mode==='custom'?'PRÊT ?':'VÉLOCITÉ';}
+ $('roll').textContent=mode==='custom'?'⟳ LANCER LE TIRAGE':'ϟ LANCER LE TIRAGE VÉLOCITÉ';
+ $('subline').textContent=mode==='velocity'?'1 à 5 joueurs · une seule équipe · aucun tirage de carte':'2 à 10 joueurs · deux équipes équilibrées · une carte';
+ renderCount();
+}
+function render(){renderPlayers();renderMaps();renderMode();}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function openAgents(id){
+ editingPlayer=id;const p=players.find(x=>x.id===id);if(!p)return;
+ $('modalTitle').textContent='AGENTS DE '+p.name.toUpperCase();roleFilter='Tous';renderAgentModal();$('agentModal').classList.add('open');
+}
+function renderAgentModal(){
+ $('roleFilters').innerHTML='';
+ ['Tous',...ROLE_ORDER].forEach(r=>{const b=document.createElement('button');b.textContent=r;b.className=roleFilter===r?'cyan':'';b.onclick=()=>{roleFilter=r;renderAgentModal();};$('roleFilters').appendChild(b);});
+ const p=players.find(x=>x.id===editingPlayer);if(!p)return;
+ $('agentGrid').innerHTML='';
+ agents.filter(a=>roleFilter==='Tous'||roleName(a)===roleFilter).forEach(a=>{
+  const on=(p.agents||[]).includes(a.uuid);const b=document.createElement('div');b.className='agent-card'+(on?' selected':'');
+  b.innerHTML=`<img src="${a.displayIcon}" loading="lazy"><strong>${esc(a.displayName)}</strong><small>${esc(roleName(a))}</small>`;
+  b.onclick=()=>{p.agents=p.agents||[];p.agents=on?p.agents.filter(x=>x!==a.uuid):[...p.agents,a.uuid];save();renderAgentModal();renderPlayers();};
+  $('agentGrid').appendChild(b);
+ });
+}
+function setAgents(all){
+ const p=players.find(x=>x.id===editingPlayer);if(!p)return;
+ const visible=agents.filter(a=>roleFilter==='Tous'||roleName(a)===roleFilter).map(a=>a.uuid);
+ p.agents=p.agents||[];
+ p.agents=all?[...new Set([...p.agents,...visible])]:p.agents.filter(x=>!visible.includes(x));
+ save();renderAgentModal();renderPlayers();
+}
+function rand(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
+function assignUnique(group){
+ const ordered=shuffle(group).sort((a,b)=>a.options.length-b.options.length);
+ const result=new Map();
+ function backtrack(i,used){
+  if(i===ordered.length)return true;
+  const p=ordered[i];
+  for(const a of shuffle(p.options)){
+   if(used.has(a.uuid))continue;
+   used.add(a.uuid);result.set(p.id,a);
+   if(backtrack(i+1,used))return true;
+   used.delete(a.uuid);result.delete(p.id);
+  }
+  return false;
+ }
+ return backtrack(0,new Set())?result:null;
+}
+function preparePlayers(){
+ return players.filter(p=>p.active!==false).map(p=>({...p,options:agents.filter(a=>(p.agents||[]).includes(a.uuid))}));
+}
+function fail(msg){$('error').textContent=msg;$('error').classList.add('show');}
+function clearError(){$('error').classList.remove('show');$('error').textContent='';}
+function renderTeam(title,items,team){
+ return `<div class="team ${team}"><h3>${title}<span class="team-count">${items.length} joueur${items.length>1?'s':''}</span></h3>${items.map(({player,agent})=>`<div class="member"><img src="${agent.displayIcon}"><div><strong>${esc(player.name)}</strong><span>${esc(agent.displayName.toUpperCase())}</span></div><div class="role">${esc(roleName(agent))}</div></div>`).join('')}</div>`;
+}
+function renderResult(res){
+ lastResult=res;
+ if(res.mode==='velocity'){
+  $('heroLabel').textContent='ÉQUIPE VÉLOCITÉ';$('heroTitle').textContent='NON CLASSÉ';
+  $('heroArt').style.background='linear-gradient(0deg,#10151e,transparent 60%),radial-gradient(ellipse at 50% 10%,#0b7770,#111723 70%)';
+  $('results').innerHTML=renderTeam('ÉQUIPE UNIQUE',res.team.map(x=>({player:x.player,agent:x.agent})),'b');
+  $('subline').textContent=res.team.length+' joueur(s) · un agent unique par joueur · aucune carte';
+ }else{
+  $('heroLabel').textContent='CARTE TIRÉE';$('heroTitle').textContent=res.map.displayName.toUpperCase();
+  $('heroArt').style.background=`linear-gradient(0deg,#10151e,transparent 60%),url('${res.map.splash}') center 42%/cover`;
+  $('results').innerHTML=renderTeam('ÉQUIPE A · ATTAQUE',res.a,'')+renderTeam('ÉQUIPE B · DÉFENSE',res.b,'b');
+  $('subline').textContent=res.players.length+' joueur(s) · '+selectedMaps.size+' carte(s) · un agent unique par équipe';
+ }
+}
+async function doRoll(){
+ if(rolling)return;clearError();
+ const list=preparePlayers();
+ if(mode==='velocity'){
+  if(list.length<1){fail('Coche au moins un joueur pour lancer le tirage.');return;}
+  if(list.length>5){fail('Il faut 5 joueurs maximum en Vélocité. Décoche au moins '+(list.length-5)+' joueur(s).');return;}
+  const missing=list.filter(p=>!p.options.length);if(missing.length){fail('Agent manquant pour : '+missing.map(p=>p.name).join(', ')+'. Sélectionne au moins un agent pour chacun.');return;}
+  const assigned=assignUnique(list);if(!assigned){fail('Tirage impossible : pas assez d’agents différents pour éviter les doublons dans l’équipe.');return;}
+  const res={mode:'velocity',team:list.map(p=>({player:p,agent:assigned.get(p.id)}))};await animateThen(()=>renderResult(res),res.team.map(x=>x.agent.displayName));return;
+ }
+ if(list.length<2||list.length>10){fail('Le mode Personnalisé nécessite entre 2 et 10 joueurs cochés.');return;}
+ if(selectedMaps.size===0){fail('Aucune carte cochée. Sélectionne au moins une carte.');return;}
+ const missing=list.filter(p=>!p.options.length);if(missing.length){fail('Agent manquant pour : '+missing.map(p=>p.name).join(', ')+'. Sélectionne au moins un agent pour chacun.');return;}
+ let found=null;
+ for(let attempt=0;attempt<300&&!found;attempt++){
+  const shuffled=shuffle(list),sizeA=Math.ceil(list.length/2),a=shuffled.slice(0,sizeA),b=shuffled.slice(sizeA);
+  const aa=assignUnique(a),bb=assignUnique(b);if(aa&&bb)found={a:a.map(p=>({player:p,agent:aa.get(p.id)})),b:b.map(p=>({player:p,agent:bb.get(p.id)}))};
+ }
+ if(!found){fail('Tirage impossible : il manque des agents différents pour éviter les doublons dans au moins une équipe. Ajoute des agents aux joueurs ou modifie les participants.');return;}
+ const res={mode:'custom',players:list,map:rand(maps.filter(m=>selectedMaps.has(m.uuid))),...found};
+ await animateThen(()=>renderResult(res),[res.map.displayName,...res.a.map(x=>x.agent.displayName),...res.b.map(x=>x.agent.displayName)]);
+}
+async function animateThen(done,words){
+ rolling=true;$('roll').disabled=true;$('roll').textContent='⟳ TIRAGE EN COURS…';
+ for(let i=0;i<10;i++){ $('heroTitle').textContent=rand(words).toUpperCase(); await new Promise(r=>setTimeout(r,85+i*13));}
+ done();rolling=false;$('roll').disabled=false;$('roll').textContent=mode==='custom'?'⟳ RELANCER LE TIRAGE':'ϟ RELANCER LE TIRAGE';
+}
+function discordText(){
+ if(!lastResult)return '';
+ if(lastResult.mode==='velocity')return '**⚡ VÉLOCITÉ / NON CLASSÉ**\n'+lastResult.team.map((x,i)=>`${i+1}. **${x.player.name}** — ${x.agent.displayName}`).join('\n');
+ return `**🎯 ROUELETTE AGENT VALORANT**\n🗺️ Carte : **${lastResult.map.displayName}**\n\n🔴 **ÉQUIPE A · ATTAQUE**\n${lastResult.a.map(x=>`• **${x.player.name}** — ${x.agent.displayName}`).join('\n')}\n\n🔵 **ÉQUIPE B · DÉFENSE**\n${lastResult.b.map(x=>`• **${x.player.name}** — ${x.agent.displayName}`).join('\n')}`;
+}
+$('addPlayer').onclick=()=>{const name=$('newPlayer').value.trim();if(!name)return;if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){alert('Ce pseudo existe déjà.');return;}if(players.length>=20){alert('Maximum 20 joueurs enregistrés.');return;}players.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),name,active:true,agents:[]});$('newPlayer').value='';save();renderPlayers();};
+$('newPlayer').addEventListener('keydown',e=>{if(e.key==='Enter')$('addPlayer').click();});
+$('customTab').onclick=()=>{mode='custom';lastResult=null;$('results').innerHTML='';save();renderMode();clearError();};
+$('velocityTab').onclick=()=>{mode='velocity';lastResult=null;$('results').innerHTML='';save();renderMode();clearError();};
+$('allMaps').onclick=()=>{selectedMaps=new Set(maps.map(m=>m.uuid));save();renderMaps();};
+$('noMaps').onclick=()=>{selectedMaps.clear();save();renderMaps();};
+$('allAgents').onclick=()=>setAgents(true);$('noAgents').onclick=()=>setAgents(false);
+$('closeModal').onclick=()=>$('agentModal').classList.remove('open');
+$('agentModal').onclick=e=>{if(e.target===$('agentModal'))$('agentModal').classList.remove('open');};
+$('roll').onclick=doRoll;
+$('copy').onclick=async()=>{const t=discordText();if(!t){fail('Lance un tirage avant de copier le résultat.');return;}try{await navigator.clipboard.writeText(t);$('copy').textContent='✓ Copié !';setTimeout(()=>$('copy').textContent='▢ Copier pour Discord',1600);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();$('copy').textContent='✓ Copié !';setTimeout(()=>$('copy').textContent='▢ Copier pour Discord',1600);}};
+load();render();loadData();
+</script>
+</body>
+</html>
