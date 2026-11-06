@@ -56,9 +56,10 @@ const STORAGE='valorant-randomizer-v1';
 const DEFAULT_MAPS=['Abyss','Ascent','Bind','Breeze','Corrode','Fracture','Haven','Icebox','Lotus','Pearl','Split','Summit','Sunset'];
 const ROLE_ORDER=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
 let agents=[],maps=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
+let agentHistory={},mapHistory=[];
 const $=id=>document.getElementById(id);
-function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode}));}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);mode=d.mode==='velocity'?'velocity':'custom';}catch(e){players=[];}}
+function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,agentHistory,mapHistory}));}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];mode=d.mode==='velocity'?'velocity':'custom';}catch(e){players=[];}}
 function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
 function playable(a){return a.isPlayableCharacter!==false && a.role && a.displayIcon}
 async function loadData(){
@@ -149,23 +150,51 @@ function setAgents(all){
 function rand(arr){return arr[Math.floor(Math.random()*arr.length)];}
 function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
 function assignUnique(group){
- const ordered=shuffle(group).sort((a,b)=>a.options.length-b.options.length);
- const result=new Map();
- function backtrack(i,used){
-  if(i===ordered.length)return true;
-  const p=ordered[i];
-  for(const a of shuffle(p.options)){
-   if(used.has(a.uuid))continue;
-   used.add(a.uuid);result.set(p.id,a);
-   if(backtrack(i+1,used))return true;
-   used.delete(a.uuid);result.delete(p.id);
+ function attempt(useFallback){
+  const ordered=shuffle(group).sort((a,b)=>{
+   const aa=useFallback?a.fallbackOptions:a.options;
+   const bb=useFallback?b.fallbackOptions:b.options;
+   return aa.length-bb.length;
+  });
+  const result=new Map();
+  function backtrack(i,used){
+   if(i===ordered.length)return true;
+   const p=ordered[i],choices=useFallback?p.fallbackOptions:p.options;
+   for(const a of shuffle(choices)){
+    if(used.has(a.uuid))continue;
+    used.add(a.uuid);result.set(p.id,a);
+    if(backtrack(i+1,used))return true;
+    used.delete(a.uuid);result.delete(p.id);
+   }
+   return false;
   }
-  return false;
+  return backtrack(0,new Set())?result:null;
  }
- return backtrack(0,new Set())?result:null;
+ return attempt(false)||attempt(true);
 }
 function preparePlayers(){
- return players.filter(p=>p.active!==false).map(p=>({...p,options:agents.filter(a=>(p.agents||[]).includes(a.uuid))}));
+ return players.filter(p=>p.active!==false).map(p=>{
+  const owned=agents.filter(a=>(p.agents||[]).includes(a.uuid));
+  const recent=agentHistory[p.id]||[];
+  const fresh=owned.filter(a=>!recent.includes(a.uuid));
+  return {...p,options:fresh.length?fresh:owned,fallbackOptions:owned};
+ });
+}
+function availableMaps(){
+ const pool=maps.filter(m=>selectedMaps.has(m.uuid));
+ const fresh=pool.filter(m=>!mapHistory.includes(m.uuid));
+ return fresh.length?fresh:pool;
+}
+function rememberResult(res){
+ const entries=res.mode==='velocity'?res.team:[...res.a,...res.b];
+ entries.forEach(({player,agent})=>{
+  const history=agentHistory[player.id]||[];
+  agentHistory[player.id]=[agent.uuid,...history.filter(id=>id!==agent.uuid)].slice(0,3);
+ });
+ if(res.mode==='custom'){
+  mapHistory=[res.map.uuid,...mapHistory.filter(id=>id!==res.map.uuid)].slice(0,5);
+ }
+ save();
 }
 function fail(msg){$('error').textContent=msg;$('error').classList.add('show');}
 function clearError(){$('error').classList.remove('show');$('error').textContent='';}
@@ -174,6 +203,7 @@ function renderTeam(title,items,team){
 }
 function renderResult(res){
  lastResult=res;
+ rememberResult(res);
  if(res.mode==='velocity'){
   $('heroLabel').textContent='ÉQUIPE VÉLOCITÉ';$('heroTitle').textContent='NON CLASSÉ';
   $('heroArt').style.background='linear-gradient(0deg,#10151e,transparent 60%),radial-gradient(ellipse at 50% 10%,#0b7770,#111723 70%)';
@@ -205,8 +235,9 @@ async function doRoll(){
   const aa=assignUnique(a),bb=assignUnique(b);if(aa&&bb)found={a:a.map(p=>({player:p,agent:aa.get(p.id)})),b:b.map(p=>({player:p,agent:bb.get(p.id)}))};
  }
  if(!found){fail('Tirage impossible : il manque des agents différents pour éviter les doublons dans au moins une équipe. Ajoute des agents aux joueurs ou modifie les participants.');return;}
- const res={mode:'custom',players:list,map:rand(maps.filter(m=>selectedMaps.has(m.uuid))),...found};
- await animateThen(()=>renderResult(res),maps.filter(m=>selectedMaps.has(m.uuid)).map(m=>m.displayName));
+ const mapPool=availableMaps();
+ const res={mode:'custom',players:list,map:rand(mapPool),...found};
+ await animateThen(()=>renderResult(res),mapPool.map(m=>m.displayName));
 }
 async function animateThen(done,words){
  rolling=true;$('roll').disabled=true;$('roll').textContent='⟳ TIRAGE EN COURS…';
