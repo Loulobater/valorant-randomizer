@@ -194,7 +194,7 @@ async function doRoll(){
   if(list.length>5){fail('Il faut 5 joueurs maximum en Vélocité. Décoche au moins '+(list.length-5)+' joueur(s).');return;}
   const missing=list.filter(p=>!p.options.length);if(missing.length){fail('Agent manquant pour : '+missing.map(p=>p.name).join(', ')+'. Sélectionne au moins un agent pour chacun.');return;}
   const assigned=assignUnique(list);if(!assigned){fail('Tirage impossible : pas assez d’agents différents pour éviter les doublons dans l’équipe.');return;}
-  const res={mode:'velocity',team:list.map(p=>({player:p,agent:assigned.get(p.id)}))};await animateThen(()=>renderResult(res),res.team.map(x=>x.agent.displayName));return;
+  const res={mode:'velocity',team:list.map(p=>({player:p,agent:assigned.get(p.id)}))};renderResult(res);$('roll').textContent='ϟ RELANCER LE TIRAGE';return;
  }
  if(list.length<2||list.length>10){fail('Le mode Personnalisé nécessite entre 2 et 10 joueurs cochés.');return;}
  if(selectedMaps.size===0){fail('Aucune carte cochée. Sélectionne au moins une carte.');return;}
@@ -206,7 +206,7 @@ async function doRoll(){
  }
  if(!found){fail('Tirage impossible : il manque des agents différents pour éviter les doublons dans au moins une équipe. Ajoute des agents aux joueurs ou modifie les participants.');return;}
  const res={mode:'custom',players:list,map:rand(maps.filter(m=>selectedMaps.has(m.uuid))),...found};
- await animateThen(()=>renderResult(res),[res.map.displayName,...res.a.map(x=>x.agent.displayName),...res.b.map(x=>x.agent.displayName)]);
+ await animateThen(()=>renderResult(res),maps.filter(m=>selectedMaps.has(m.uuid)).map(m=>m.displayName));
 }
 async function animateThen(done,words){
  rolling=true;$('roll').disabled=true;$('roll').textContent='⟳ TIRAGE EN COURS…';
