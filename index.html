@@ -200,6 +200,7 @@ function rememberResult(res){
  matchHistory=[entry,...matchHistory].slice(0,20);
  save();
  renderHistory();
+ renderStats();
 }
 function renderHistory(){
  const agentSelect=$('agentMemoryLimit');if(agentSelect)agentSelect.value=String(agentMemoryLimit);const mapSelect=$('mapMemoryLimit');if(mapSelect)mapSelect.value=String(mapMemoryLimit);
@@ -325,7 +326,7 @@ $('historyList').onclick=e=>{const btn=e.target.closest('[data-copy-match]');if(
 $('exportBackup').onclick=exportBackup;
 $('importBackup').onclick=()=>$('backupFile').click();
 $('backupFile').onchange=e=>{const file=e.target.files[0];if(file)importBackup(file);e.target.value='';};
-$('clearHistory').onclick=()=>{if(!matchHistory.length)return;if(confirm('Effacer tout l’historique des parties ?')){matchHistory=[];save();renderHistory();}};
+$('clearHistory').onclick=()=>{if(!matchHistory.length)return;if(confirm('Effacer tout l’historique des parties ?')){matchHistory=[];save();renderHistory();renderStats();}};
 $('copy').onclick=async()=>{const t=discordText();if(!t){fail('Lance un tirage avant de copier le résultat.');return;}try{await navigator.clipboard.writeText(t);$('copy').textContent='✓ Copié !';setTimeout(()=>$('copy').textContent='▢ Copier pour Discord',1600);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();$('copy').textContent='✓ Copié !';setTimeout(()=>$('copy').textContent='▢ Copier pour Discord',1600);}};
 load();render();loadData();
 </script>
