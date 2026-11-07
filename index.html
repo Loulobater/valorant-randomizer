@@ -42,7 +42,7 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
  <div class="subline" id="subline">Sélectionne les joueurs et leurs agents pour commencer.</div>
  <div class="error" id="error"></div>
  <div class="results" id="results"></div>
- <section class="history-panel"><div class="history-head"><div><div class="section-no cyan">03 // ARCHIVES</div><h2>HISTORIQUE DES PARTIES</h2></div><div class="history-controls"><label class="history-setting" for="agentMemoryLimit">MÉMOIRE AGENTS <select id="agentMemoryLimit"><option value="5">5 parties</option><option value="10">10 parties</option><option value="15">15 parties</option><option value="20">20 parties</option></select></label><label class="history-setting" for="mapMemoryLimit">MÉMOIRE CARTES <select id="mapMemoryLimit"><option value="5">5 parties</option><option value="10">10 parties</option><option value="15">15 parties</option><option value="20">20 parties</option></select></label><button class="ghost" id="clearHistory">Effacer</button></div></div><div class="history-list" id="historyList"><div class="history-empty">Aucune partie enregistrée pour le moment.</div></div></section><section class="stats-panel"><div class="section-no cyan">04 // ANALYSE</div><h2>STATISTIQUES DES TIRAGES</h2><div id="statsContent"></div></section>
+ <section class="history-panel"><div class="history-head"><div><div class="section-no cyan">03 // ARCHIVES</div><h2>HISTORIQUE DES PARTIES</h2></div><div class="history-controls"><label class="history-setting" for="agentMemoryLimit">MÉMOIRE AGENTS <select id="agentMemoryLimit"><option value="5">5 parties</option><option value="10">10 parties</option><option value="15">15 parties</option><option value="20">20 parties</option></select></label><label class="history-setting" for="mapMemoryLimit">MÉMOIRE CARTES <select id="mapMemoryLimit"><option value="5">5 parties</option><option value="10">10 parties</option><option value="15">15 parties</option><option value="20">20 parties</option></select></label><button class="ghost" id="clearHistory">Effacer</button></div></div><div class="history-list" id="historyList"><div class="history-empty">Aucune partie enregistrée pour le moment.</div></div></section><section class="stats-panel"><div class="section-no cyan">04 // ANALYSE</div><h2>STATISTIQUES DES TIRAGES</h2><div id="statsContent"></div><div class="history-actions"><button id="exportBackup">↓ Exporter ma sauvegarde</button><button id="importBackup">↑ Importer une sauvegarde</button><input id="backupFile" type="file" accept=".json,application/json" hidden></div></section>
 </section>
 <section class="panel maps-panel" id="mapsPanel">
  <div class="panel-head"><div><div class="section-no cyan">02 // TERRAIN</div><h2>POOL DE CARTES</h2></div><div class="count" id="mapCount">0/0</div></div>
@@ -233,6 +233,29 @@ function copyHistoryMatch(index){
  const fallback=()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();};
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(fallback);else fallback();
 }
+function exportBackup(){
+ const data={format:'valorant-randomizer-backup',version:1,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit};
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='valorant-randomizer-sauvegarde.json';a.click();URL.revokeObjectURL(url);
+}
+function importBackup(file){
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const d=JSON.parse(reader.result);
+   if(d.format!=='valorant-randomizer-backup'||!Array.isArray(d.players)||!Array.isArray(d.selectedMaps))throw new Error('Fichier non reconnu');
+   if(!confirm('Importer cette sauvegarde ? Les données actuelles seront remplacées.'))return;
+   players=d.players;selectedMaps=new Set(d.selectedMaps);hasSavedMapSelection=true;mode=d.mode==='velocity'?'velocity':'custom';
+   agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};
+   mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];
+   matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];
+   agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;
+   mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;
+   save();render();alert('Sauvegarde importée avec succès.');
+  }catch(e){alert('Impossible d’importer ce fichier : sauvegarde invalide.');}
+ };
+ reader.readAsText(file);
+}
 function fail(msg){$('error').textContent=msg;$('error').classList.add('show');}
 function clearError(){$('error').classList.remove('show');$('error').textContent='';}
 function renderTeam(title,items,team){
@@ -299,6 +322,9 @@ $('roll').onclick=doRoll;
 $('agentMemoryLimit').onchange=e=>{agentMemoryLimit=Number(e.target.value);Object.keys(agentHistory).forEach(id=>{agentHistory[id]=(Array.isArray(agentHistory[id])?agentHistory[id]:[]).slice(0,agentMemoryLimit);});save();};
 $('mapMemoryLimit').onchange=e=>{mapMemoryLimit=Number(e.target.value);mapHistory=mapHistory.slice(0,mapMemoryLimit);save();};
 $('historyList').onclick=e=>{const btn=e.target.closest('[data-copy-match]');if(btn){copyHistoryMatch(Number(btn.dataset.copyMatch));btn.textContent='✓ Copié';setTimeout(()=>btn.textContent='▢ Copier cette partie',1400);}};
+$('exportBackup').onclick=exportBackup;
+$('importBackup').onclick=()=>$('backupFile').click();
+$('backupFile').onchange=e=>{const file=e.target.files[0];if(file)importBackup(file);e.target.value='';};
 $('clearHistory').onclick=()=>{if(!matchHistory.length)return;if(confirm('Effacer tout l’historique des parties ?')){matchHistory=[];save();renderHistory();}};
 $('copy').onclick=async()=>{const t=discordText();if(!t){fail('Lance un tirage avant de copier le résultat.');return;}try{await navigator.clipboard.writeText(t);$('copy').textContent='✓ Copié !';setTimeout(()=>$('copy').textContent='▢ Copier pour Discord',1600);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();$('copy').textContent='✓ Copié !';setTimeout(()=>$('copy').textContent='▢ Copier pour Discord',1600);}};
 load();render();loadData();
