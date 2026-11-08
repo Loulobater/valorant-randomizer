@@ -50,6 +50,22 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
 .agent-stat-list{display:grid;gap:5px}
 .agent-stat-line{display:flex;align-items:center;gap:8px;font-size:11px}
 .agent-stat-line img{width:28px;height:28px;object-fit:cover;border-radius:3px}
+.draw-style{border:1px solid #293342;background:#131a26;padding:12px 14px;display:grid;gap:9px}
+.draw-style-head{font:10px Consolas,monospace;letter-spacing:2px;color:#aab5c5}
+.draw-style-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.draw-style-options button{padding:12px 8px;font-size:12px;letter-spacing:1px}
+.draw-style-options button.active.fun{background:#35263d;border-color:#ad73d0;color:#f0d5ff}
+.draw-style-options button.active.serious{background:#153a37;border-color:#25b9a9;color:#8ff6e8}
+.draw-style-note{font-size:11px;color:#9ba8ba;line-height:1.5}
+.preference-box{background:#101722;border:1px solid #303b4d;padding:12px;margin:12px 0}
+.preference-title{font:10px Consolas,monospace;letter-spacing:1px;color:var(--gold);margin-bottom:8px}
+.preference-roles{display:flex;flex-wrap:wrap;gap:6px}
+.preference-roles button{font-size:10px;padding:7px 9px}
+.preference-roles button.selected{border-color:var(--cyan);background:#123936;color:var(--cyan)}
+.agent-card{position:relative}
+.agent-card .favorite-toggle{width:100%;margin-top:5px;padding:5px;font-size:10px;color:#e8c878;background:#292416;border-color:#66552b}
+.agent-card .favorite-toggle.selected{background:#59451b;border-color:#d6a63b;color:#ffe29a}
+@media(max-width:700px){.draw-style-options{grid-template-columns:1fr 1fr}}
 
 @media(max-width:700px){.app-tabs{padding:12px 10px 0;gap:5px}.app-tab{min-width:0;flex:1;padding:11px 5px;font-size:9px}.page-section{margin:14px auto;padding:0 15px 20px}.page-section .history-panel,.page-section .stats-panel{padding:12px}}
 .footer{padding:0 3vw 22px;color:#7d899c;font:10px Consolas,monospace;position:relative}
@@ -73,6 +89,7 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
 </section>
 <section class="center">
  <div class="mode-tabs"><button class="active custom" id="customTab">⚔ PERSONNALISÉ</button><button class="velocity" id="velocityTab">ϟ VÉLOCITÉ / NON CLASSÉ</button></div>
+ <div class="draw-style" id="drawStylePanel"><div class="draw-style-head">STYLE DE TIRAGE</div><div class="draw-style-options"><button type="button" class="active fun" id="funMode">🎲 MODE FUN</button><button type="button" id="seriousMode">🏆 MODE SÉRIEUX</button></div><div class="draw-style-note" id="drawStyleNote">Tout est aléatoire : les préférences et l'équilibrage des rôles sont ignorés.</div></div>
  <div class="hero" id="hero"><div class="hero-art" id="heroArt"></div><div class="hero-copy"><div class="hero-label" id="heroLabel">CARTE TIRÉE</div><h1 id="heroTitle">PRÊT ?</h1></div></div>
  <div class="actions"><button class="primary roll" id="roll">⟳ LANCER LE TIRAGE</button><button class="copy" id="copy">▢ Copier pour Discord</button></div>
  <div class="subline" id="subline">Sélectionne les joueurs et leurs agents pour commencer.</div>
@@ -92,17 +109,17 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
  <section class="stats-panel"><div class="section-no cyan">04 // ANALYSE</div><h2>STATISTIQUES DES TIRAGES</h2><div id="statsContent"></div><div class="history-actions"><button id="exportBackup">↓ Exporter ma sauvegarde</button><button id="importBackup">↑ Importer une sauvegarde</button><input id="backupFile" type="file" accept=".json,application/json" hidden></div></section>
 </section>
 <div class="footer">FAN PROJECT // DONNÉES DE JEU FOURNIES PAR VALORANT-API.COM · NON AFFILIÉ À RIOT GAMES</div>
-<div class="modal" id="agentModal"><div class="dialog"><div class="dialog-head"><div><div class="section-no cyan">ARSENAL // SÉLECTION</div><h2 id="modalTitle">AGENTS DE JOUEUR</h2></div><button id="closeModal">✕ Fermer</button></div><div class="filters" id="roleFilters"></div><div class="filters"><button id="allAgents">Tous</button><button id="noAgents">Aucun</button></div><div class="agent-grid" id="agentGrid"></div></div></div>
+<div class="modal" id="agentModal"><div class="dialog"><div class="dialog-head"><div><div class="section-no cyan">ARSENAL // SÉLECTION</div><h2 id="modalTitle">AGENTS DE JOUEUR</h2></div><button id="closeModal">✕ Fermer</button></div><div class="filters" id="roleFilters"></div><div class="preference-box"><div class="preference-title">RÔLES PRÉFÉRÉS · UTILISÉS EN MODE SÉRIEUX</div><div class="preference-roles" id="preferredRoleFilters"></div><div class="draw-style-note">Sélectionne un ou plusieurs rôles que ce joueur apprécie. En mode Fun, ces choix sont ignorés.</div></div><div class="filters"><button id="allAgents">Tous</button><button id="noAgents">Aucun</button></div><div class="agent-grid" id="agentGrid"></div></div></div>
 <script>
 const API='https://valorant-api.com/v1';
 const STORAGE='valorant-randomizer-v1';
 const DEFAULT_MAPS=['Abyss','Ascent','Bind','Breeze','Corrode','Fracture','Haven','Icebox','Lotus','Pearl','Split','Summit','Sunset'];
 const ROLE_ORDER=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
-let agents=[],maps=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
+let agents=[],maps=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',drawStyle='fun',lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
 let agentHistory={},mapHistory=[],matchHistory=[],agentMemoryLimit=5,mapMemoryLimit=5;
 const $=id=>document.getElementById(id);
-function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit}));}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';}catch(e){players=[];}}
+function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit}));}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));}catch(e){players=[];}}
 function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
 function playable(a){return a.isPlayableCharacter!==false && a.role && a.displayIcon}
 async function loadData(){
@@ -165,7 +182,7 @@ function renderMode(){
  $('subline').textContent=mode==='velocity'?'1 à 5 joueurs · une seule équipe · aucun tirage de carte':'2 à 10 joueurs · deux équipes équilibrées · une carte';
  renderCount();
 }
-function render(){renderPlayers();renderMaps();renderMode();renderHistory();renderStats();}
+function render(){renderPlayers();renderMaps();renderMode();renderDrawStyle();renderHistory();renderStats();}
 
 function showPage(page){
  const roulette=$('rouletteView'),history=$('historyView'),statistics=$('statisticsView');
@@ -185,11 +202,15 @@ function renderAgentModal(){
  $('roleFilters').innerHTML='';
  ['Tous',...ROLE_ORDER].forEach(r=>{const b=document.createElement('button');b.textContent=r;b.className=roleFilter===r?'cyan':'';b.onclick=()=>{roleFilter=r;renderAgentModal();};$('roleFilters').appendChild(b);});
  const p=players.find(x=>x.id===editingPlayer);if(!p)return;
+ p.preferredRoles=p.preferredRoles||[];p.favoriteAgents=p.favoriteAgents||[];
+ const roleHost=$('preferredRoleFilters');roleHost.innerHTML='';
+ ROLE_ORDER.forEach(role=>{const b=document.createElement('button');const selected=p.preferredRoles.includes(role);b.textContent=(selected?'✓ ':'＋ ')+role;b.className=selected?'selected':'';b.onclick=()=>{p.preferredRoles=selected?p.preferredRoles.filter(x=>x!==role):[...p.preferredRoles,role];save();renderAgentModal();};roleHost.appendChild(b);});
  $('agentGrid').innerHTML='';
  agents.filter(a=>roleFilter==='Tous'||roleName(a)===roleFilter).forEach(a=>{
-  const on=(p.agents||[]).includes(a.uuid);const b=document.createElement('div');b.className='agent-card'+(on?' selected':'');
-  b.innerHTML=`<img src="${a.displayIcon}" loading="lazy"><strong>${esc(a.displayName)}</strong><small>${esc(roleName(a))}</small>`;
+  const on=(p.agents||[]).includes(a.uuid),fav=p.favoriteAgents.includes(a.uuid);const b=document.createElement('div');b.className='agent-card'+(on?' selected':'');
+  b.innerHTML=`<img src="${a.displayIcon}" loading="lazy"><strong>${esc(a.displayName)}</strong><small>${esc(roleName(a))}</small><button type="button" class="favorite-toggle ${fav?'selected':''}">${fav?'★ Agent préféré':'☆ Définir préféré'}</button>`;
   b.onclick=()=>{p.agents=p.agents||[];p.agents=on?p.agents.filter(x=>x!==a.uuid):[...p.agents,a.uuid];save();renderAgentModal();renderPlayers();};
+  b.querySelector('.favorite-toggle').onclick=e=>{e.stopPropagation();p.favoriteAgents=p.favoriteAgents||[];p.favoriteAgents=fav?p.favoriteAgents.filter(x=>x!==a.uuid):[...p.favoriteAgents,a.uuid];save();renderAgentModal();};
   $('agentGrid').appendChild(b);
  });
 }
@@ -235,9 +256,44 @@ function preparePlayers(){
    const people=h.mode==='velocity'?(h.team||[]):[...(h.a||[]),...(h.b||[])];
    people.filter(x=>x.player===p.name).forEach(x=>{const role=x.role||'Autre';roleCounts[role]=(roleCounts[role]||0)+1;});
   });
-  const roleSorted=list=>shuffle(list).sort((a,b)=>(roleCounts[roleName(a)]||0)-(roleCounts[roleName(b)]||0));
-  return {...p,options:roleSorted(fresh.length?fresh:owned),fallbackOptions:roleSorted(owned)};
+  const order=list=>drawStyle==='serious'
+   ?shuffle(list).sort((a,b)=>{
+     const af=(p.favoriteAgents||[]).includes(a.uuid)?1:0,bf=(p.favoriteAgents||[]).includes(b.uuid)?1:0;
+     const ar=(p.preferredRoles||[]).includes(roleName(a))?1:0,br=(p.preferredRoles||[]).includes(roleName(b))?1:0;
+     return (bf-af)*100+(br-ar)*20+(roleCounts[roleName(a)]||0)-(roleCounts[roleName(b)]||0);
+    })
+   :shuffle(list);
+  return {...p,roleCounts,options:order(fresh.length?fresh:owned),fallbackOptions:order(owned)};
  });
+}
+function compositionScore(items){
+ const counts={};let score=0;
+ items.forEach(({player,agent})=>{
+  const role=roleName(agent);counts[role]=(counts[role]||0)+1;
+  if((player.favoriteAgents||[]).includes(agent.uuid))score+=12;
+  if((player.preferredRoles||[]).includes(role))score+=7;
+  score+=2/(1+(player.roleCounts?.[role]||0));
+ });
+ score+=Object.keys(counts).length*4;
+ score-=Object.values(counts).reduce((sum,n)=>sum+n*n,0)*3;
+ return score;
+}
+function bestAssignment(group){
+ let best=null,bestScore=-Infinity;
+ for(let i=0;i<250;i++){
+  const assigned=assignUnique(group);if(!assigned)continue;
+  const items=group.map(player=>({player,agent:assigned.get(player.id)}));
+  const score=compositionScore(items);
+  if(score>bestScore){bestScore=score;best=assigned;}
+ }
+ return best;
+}
+function renderDrawStyle(){
+ $('funMode').classList.toggle('active',drawStyle==='fun');$('funMode').classList.toggle('fun',drawStyle==='fun');
+ $('seriousMode').classList.toggle('active',drawStyle==='serious');$('seriousMode').classList.toggle('serious',drawStyle==='serious');
+ $('drawStyleNote').textContent=drawStyle==='fun'
+  ?'Tout est aléatoire : les préférences et l’équilibrage des rôles sont ignorés. L’anti-répétition des agents reste actif.'
+  :'Les agents et rôles préférés sont privilégiés, et la composition de chaque équipe cherche à varier les rôles.';
 }
 function availableMaps(){
  const pool=maps.filter(m=>selectedMaps.has(m.uuid));
@@ -306,7 +362,7 @@ function copyHistoryMatch(index){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(fallback);else fallback();
 }
 function exportBackup(){
- const data={format:'valorant-randomizer-backup',version:1,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit};
+ const data={format:'valorant-randomizer-backup',version:1,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='valorant-randomizer-sauvegarde.json';a.click();URL.revokeObjectURL(url);
 }
@@ -317,7 +373,7 @@ function importBackup(file){
    const d=JSON.parse(reader.result);
    if(d.format!=='valorant-randomizer-backup'||!Array.isArray(d.players)||!Array.isArray(d.selectedMaps))throw new Error('Fichier non reconnu');
    if(!confirm('Importer cette sauvegarde ? Les données actuelles seront remplacées.'))return;
-   players=d.players;selectedMaps=new Set(d.selectedMaps);hasSavedMapSelection=true;mode=d.mode==='velocity'?'velocity':'custom';
+   players=d.players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));selectedMaps=new Set(d.selectedMaps);hasSavedMapSelection=true;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';
    agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};
    mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];
    matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];
@@ -355,16 +411,20 @@ async function doRoll(){
   if(list.length<1){fail('Coche au moins un joueur pour lancer le tirage.');return;}
   if(list.length>5){fail('Il faut 5 joueurs maximum en Vélocité. Décoche au moins '+(list.length-5)+' joueur(s).');return;}
   const missing=list.filter(p=>!p.options.length);if(missing.length){fail('Agent manquant pour : '+missing.map(p=>p.name).join(', ')+'. Sélectionne au moins un agent pour chacun.');return;}
-  const assigned=assignUnique(list);if(!assigned){fail('Tirage impossible : pas assez d’agents différents pour éviter les doublons dans l’équipe.');return;}
+  const assigned=drawStyle==='serious'?bestAssignment(list):assignUnique(list);if(!assigned){fail('Tirage impossible : pas assez d’agents différents pour éviter les doublons dans l’équipe.');return;}
   const res={mode:'velocity',team:list.map(p=>({player:p,agent:assigned.get(p.id)}))};renderResult(res);$('roll').textContent='ϟ RELANCER LE TIRAGE';return;
  }
  if(list.length<2||list.length>10){fail('Le mode Personnalisé nécessite entre 2 et 10 joueurs cochés.');return;}
  if(selectedMaps.size===0){fail('Aucune carte cochée. Sélectionne au moins une carte.');return;}
  const missing=list.filter(p=>!p.options.length);if(missing.length){fail('Agent manquant pour : '+missing.map(p=>p.name).join(', ')+'. Sélectionne au moins un agent pour chacun.');return;}
- let found=null;
- for(let attempt=0;attempt<300&&!found;attempt++){
+ let found=null,bestScore=-Infinity;
+ for(let attempt=0;attempt<(drawStyle==='serious'?300:300);attempt++){
   const shuffled=shuffle(list),sizeA=Math.ceil(list.length/2),a=shuffled.slice(0,sizeA),b=shuffled.slice(sizeA);
-  const aa=assignUnique(a),bb=assignUnique(b);if(aa&&bb)found={a:a.map(p=>({player:p,agent:aa.get(p.id)})),b:b.map(p=>({player:p,agent:bb.get(p.id)}))};
+  const aa=assignUnique(a),bb=assignUnique(b);if(!aa||!bb)continue;
+  const candidate={a:a.map(p=>({player:p,agent:aa.get(p.id)})),b:b.map(p=>({player:p,agent:bb.get(p.id)}))};
+  if(drawStyle==='fun'){found=candidate;break;}
+  const score=compositionScore(candidate.a)+compositionScore(candidate.b);
+  if(score>bestScore){bestScore=score;found=candidate;}
  }
  if(!found){fail('Tirage impossible : il manque des agents différents pour éviter les doublons dans au moins une équipe. Ajoute des agents aux joueurs ou modifie les participants.');return;}
  const mapPool=availableMaps();
@@ -384,6 +444,8 @@ function discordText(){
 document.querySelectorAll('.app-tab').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 $('addPlayer').onclick=()=>{const name=$('newPlayer').value.trim();if(!name)return;if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){alert('Ce pseudo existe déjà.');return;}if(players.length>=20){alert('Maximum 20 joueurs enregistrés.');return;}players.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),name,active:true,agents:[]});$('newPlayer').value='';save();renderPlayers();};
 $('newPlayer').addEventListener('keydown',e=>{if(e.key==='Enter')$('addPlayer').click();});
+$('funMode').onclick=()=>{drawStyle='fun';save();renderDrawStyle();clearError();};
+$('seriousMode').onclick=()=>{drawStyle='serious';save();renderDrawStyle();clearError();};
 $('customTab').onclick=()=>{mode='custom';lastResult=null;$('results').innerHTML='';save();renderMode();clearError();};
 $('velocityTab').onclick=()=>{mode='velocity';lastResult=null;$('results').innerHTML='';save();renderMode();clearError();};
 $('allMaps').onclick=()=>{selectedMaps=new Set(maps.map(m=>m.uuid));save();renderMaps();};
