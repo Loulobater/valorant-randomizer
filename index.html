@@ -251,6 +251,7 @@ function generatePlayoffs(){const ids=[];tournament.groups.forEach(g=>groupStand
 function createTournament(){
  const count=Math.max(2,Math.min(16,Number($('tournamentTeamCount').value)||2)),size=Math.max(2,Math.min(5,Number($('tournamentTeamSize').value)||2)),chosen=tournamentPlayers.filter(p=>p.active!==false),needed=count*size;
  if(chosen.length<needed){alert('Il faut '+needed+' joueurs sélectionnés pour créer '+count+' équipes de '+size+'. Il en manque '+(needed-chosen.length)+'.');return;}
+ if(chosen.length>needed&&!confirm(chosen.length+' joueurs sont sélectionnés, mais '+needed+' sont nécessaires. Les participants retenus seront tirés au sort. Continuer ?'))return;
  const picked=shuffle(chosen).slice(0,needed),teams=[];for(let i=0;i<count;i++)teams.push({id:'team-'+(i+1),name:'Équipe '+(i+1),players:picked.slice(i*size,(i+1)*size).map(p=>p.name)});
  tournament={title:'TOURNOI VALORANT',teamSize:size,groupSize:Number($('tournamentGroupSize').value)||4,format:$('tournamentFormat').value,teams,phase:$('tournamentFormat').value==='groups'?'groups':'knockout',groups:[],rounds:[]};
  if(tournament.phase==='groups'){const sizeGroup=Number($('tournamentGroupSize').value)||4,groupCount=Math.ceil(count/sizeGroup),groups=[];teams.forEach((t,i)=>{const gi=i%groupCount;(groups[gi]||(groups[gi]={teams:[],matches:[]})).teams.push(t.id);});groups.forEach(g=>{for(let i=0;i<g.teams.length;i++)for(let j=i+1;j<g.teams.length;j++)g.matches.push({a:g.teams[i],b:g.teams[j],winner:null});});tournament.groups=groups;}else buildKnockout(teams.map(t=>t.id));
