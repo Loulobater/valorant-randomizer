@@ -33,6 +33,24 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
 .player-stat-card h3{font-size:15px;margin:0 0 9px;color:var(--cyan)}
 .player-stat-card p{font-size:11px;color:#aab5c5;margin:5px 0}
 .player-stat-card strong{color:var(--gold)}
+.history-map-thumb{width:100%;height:110px;object-fit:cover;border-radius:4px;margin-bottom:10px;border:1px solid #39465b}
+.history-member{display:flex;align-items:center;gap:8px;margin:7px 0}
+.history-member img{width:38px;height:38px;object-fit:cover;border-radius:4px;background:#252d3d}
+.history-member span{font-size:11px}
+.player-stat-item{background:#1a2030;border:1px solid #303b4d;border-radius:4px;overflow:hidden}
+.player-stat-summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:13px;font-weight:750}
+.player-stat-summary::-webkit-details-marker{display:none}
+.player-stat-summary:after{content:"›";margin-left:auto;color:var(--cyan);font-size:22px;transform:rotate(90deg)}
+.player-stat-item[open]>.player-stat-summary:after{transform:rotate(-90deg)}
+.player-stat-detail{padding:0 13px 13px;border-top:1px solid #303b4d}
+.role-bars{display:grid;gap:8px;margin:10px 0}
+.role-row{display:grid;grid-template-columns:95px 1fr 28px;gap:8px;align-items:center;font-size:11px}
+.role-track{height:9px;background:#101722;border-radius:8px;overflow:hidden}
+.role-fill{height:100%;background:var(--cyan);border-radius:8px}
+.agent-stat-list{display:grid;gap:5px}
+.agent-stat-line{display:flex;align-items:center;gap:8px;font-size:11px}
+.agent-stat-line img{width:28px;height:28px;object-fit:cover;border-radius:3px}
+
 @media(max-width:700px){.app-tabs{padding:12px 10px 0;gap:5px}.app-tab{min-width:0;flex:1;padding:11px 5px;font-size:9px}.page-section{margin:14px auto;padding:0 15px 20px}.page-section .history-panel,.page-section .stats-panel{padding:12px}}
 .footer{padding:0 3vw 22px;color:#7d899c;font:10px Consolas,monospace;position:relative}
 @media(max-width:1100px){main{grid-template-columns:minmax(250px,.85fr) minmax(340px,1.4fr)}.maps-panel{grid-column:1/-1}.maps{grid-template-columns:repeat(4,1fr)}}
@@ -212,7 +230,13 @@ function preparePlayers(){
   const owned=agents.filter(a=>(p.agents||[]).includes(a.uuid));
   const recent=agentHistory[p.id]||[];
   const fresh=owned.filter(a=>!recent.includes(a.uuid));
-  return {...p,options:fresh.length?fresh:owned,fallbackOptions:owned};
+  const roleCounts={};
+  matchHistory.forEach(h=>{
+   const people=h.mode==='velocity'?(h.team||[]):[...(h.a||[]),...(h.b||[])];
+   people.filter(x=>x.player===p.name).forEach(x=>{const role=x.role||'Autre';roleCounts[role]=(roleCounts[role]||0)+1;});
+  });
+  const roleSorted=list=>shuffle(list).sort((a,b)=>(roleCounts[roleName(a)]||0)-(roleCounts[roleName(b)]||0));
+  return {...p,options:roleSorted(fresh.length?fresh:owned),fallbackOptions:roleSorted(owned)};
  });
 }
 function availableMaps(){
@@ -230,7 +254,7 @@ function rememberResult(res){
   mapHistory=[res.map.uuid,...mapHistory.filter(id=>id!==res.map.uuid)].slice(0,mapMemoryLimit);
  }
  const snapshot=items=>items.map(({player,agent})=>({player:player.name,agent:agent.displayName,icon:agent.displayIcon,role:roleName(agent)}));
- const entry={id:Date.now(),date:new Date().toISOString(),mode:res.mode,map:res.mode==='custom'?res.map.displayName:null,a:res.mode==='custom'?snapshot(res.a):[],b:res.mode==='custom'?snapshot(res.b):[],team:res.mode==='velocity'?snapshot(res.team):[]};
+ const entry={id:Date.now(),date:new Date().toISOString(),mode:res.mode,map:res.mode==='custom'?res.map.displayName:null,mapImage:res.mode==='custom'?res.map.splash:null,a:res.mode==='custom'?snapshot(res.a):[],b:res.mode==='custom'?snapshot(res.b):[],team:res.mode==='velocity'?snapshot(res.team):[]};
  matchHistory=[entry,...matchHistory].slice(0,20);
  save();
  renderHistory();
@@ -240,37 +264,39 @@ function renderHistory(){
  const agentSelect=$('agentMemoryLimit');if(agentSelect)agentSelect.value=String(agentMemoryLimit);const mapSelect=$('mapMemoryLimit');if(mapSelect)mapSelect.value=String(mapMemoryLimit);
  const host=$('historyList');if(!host)return;
  if(!matchHistory.length){host.innerHTML='<div class="history-empty">Aucune partie enregistrée pour le moment. Lance un tirage pour commencer !</div>';return;}
- const teamHtml=(title,items,cls)=>'<div class="history-team '+(cls||'')+'"><strong>'+title+'</strong>'+items.map(x=>esc(x.player)+' — '+esc(x.agent)).join('<br>')+'</div>';
+ const teamHtml=(title,items,cls)=>'<div class="history-team '+(cls||'')+'"><strong>'+title+'</strong>'+items.map(x=>'<div class="history-member">'+(x.icon?'<img src="'+esc(x.icon)+'" alt="">':'')+'<span>'+esc(x.player)+' — '+esc(x.agent)+'<br><small>'+esc(x.role||'')+'</small></span></div>').join('')+'</div>';
  host.innerHTML=matchHistory.map((h,i)=>{
   const date=new Date(h.date);
   const when=Number.isNaN(date.getTime())?'Date inconnue':date.toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});
   const modeLabel=h.mode==='velocity'?'VÉLOCITÉ':'PERSONNALISÉ';
   const teams=h.mode==='velocity'?teamHtml('ÉQUIPE VÉLOCITÉ',h.team,'velocity'):teamHtml('ÉQUIPE A',h.a,'')+teamHtml('ÉQUIPE B',h.b,'b');
-  return '<details class="history-item"><summary class="history-summary"><span class="history-number">#'+(matchHistory.length-i)+'</span><span class="history-summary-main"><span class="history-summary-mode">'+modeLabel+'</span>'+(h.map?'<span class="history-summary-map">🗺 '+esc(h.map)+'</span>':'')+'</span><span class="history-summary-date">'+esc(when)+'</span></summary><div class="history-detail"><div class="history-teams">'+teams+'</div><div class="history-actions"><button type="button" data-copy-match="'+i+'">▢ Copier cette partie</button></div></div></details>';
+  const mapObj=maps.find(m=>m.displayName===h.map);const mapImg=h.mapImage||(mapObj?mapObj.splash:'');
+  return '<details class="history-item"><summary class="history-summary"><span class="history-number">#'+(matchHistory.length-i)+'</span><span class="history-summary-main"><span class="history-summary-mode">'+modeLabel+'</span>'+(h.map?'<span class="history-summary-map">🗺 '+esc(h.map)+'</span>':'')+'</span><span class="history-summary-date">'+esc(when)+'</span></summary><div class="history-detail">'+(mapImg?'<img class="history-map-thumb" src="'+esc(mapImg)+'" alt="'+esc(h.map||'Carte')+'">':'')+'<div class="history-teams">'+teams+'</div><div class="history-actions"><button type="button" data-copy-match="'+i+'">▢ Copier cette partie</button></div></div></details>';
  }).join('');
 }
 function renderStats(){
  const host=$('statsContent');if(!host)return;
- const agentCounts={},mapCounts={},playerStats={};
+ const agentCounts={},roleCounts={},playerStats={};const roleLabels=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
  matchHistory.forEach(h=>{
   const people=h.mode==='velocity'?(h.team||[]):[...(h.a||[]),...(h.b||[])];
   people.forEach(x=>{
    if(x.agent)agentCounts[x.agent]=(agentCounts[x.agent]||0)+1;
-   if(!x.player)return;
-   const p=playerStats[x.player]||(playerStats[x.player]={games:0,agents:{},maps:{}});
-   p.games++;
-   if(x.agent)p.agents[x.agent]=(p.agents[x.agent]||0)+1;
-   if(h.map)p.maps[h.map]=(p.maps[h.map]||0)+1;
+   const role=x.role||'Autre';roleCounts[role]=(roleCounts[role]||0)+1;
+   if(!x.player)return;const p=playerStats[x.player]||(playerStats[x.player]={games:0,agents:{},roles:{}});
+   p.games++;if(x.agent)p.agents[x.agent]=(p.agents[x.agent]||0)+1;p.roles[role]=(p.roles[role]||0)+1;
   });
-  if(h.map)mapCounts[h.map]=(mapCounts[h.map]||0)+1;
  });
  const top=obj=>Object.entries(obj).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,5);
  const list=(title,items)=>'<div class="stat-list"><strong>'+title+'</strong>'+(items.length?items.map(([name,count])=>esc(name)+' — '+count+' fois').join('<br>'):'<span style="color:var(--muted)">Pas encore de données</span>')+'</div>';
+ const maxRole=Math.max(1,...Object.values(roleCounts));
+ const roleBars=roleLabels.map(role=>{const n=roleCounts[role]||0;return '<div class="role-row"><span>'+role+'</span><div class="role-track"><div class="role-fill" style="width:'+Math.round(n/maxRole*100)+'%"></div></div><strong>'+n+'</strong></div>';}).join('');
  const playerCards=Object.entries(playerStats).sort((a,b)=>b[1].games-a[1].games||a[0].localeCompare(b[0])).map(([name,data])=>{
-  const bestAgents=top(data.agents),bestMaps=top(data.maps);
-  return '<div class="player-stat-card"><h3>'+esc(name)+'</h3><p><strong>'+data.games+'</strong> partie(s) enregistrée(s)</p><p><strong>Agents les plus joués :</strong> '+(bestAgents.length?bestAgents.map(([n,c])=>esc(n)+' ('+c+')').join(', '):'—')+'</p><p><strong>Cartes jouées :</strong> '+(bestMaps.length?bestMaps.map(([n,c])=>esc(n)+' ('+c+')').join(', '):'—')+'</p></div>';
+  const bestAgents=top(data.agents),maxP=Math.max(1,...Object.values(data.roles));
+  const bars=roleLabels.map(role=>{const n=data.roles[role]||0;return '<div class="role-row"><span>'+role+'</span><div class="role-track"><div class="role-fill" style="width:'+Math.round(n/maxP*100)+'%"></div></div><strong>'+n+'</strong></div>';}).join('');
+  const agentRows=bestAgents.map(([agent,count])=>{const found=matchHistory.flatMap(h=>h.mode==='velocity'?(h.team||[]):[...(h.a||[]),...(h.b||[])]).find(x=>x.agent===agent&&x.icon);return '<div class="agent-stat-line">'+(found?'<img src="'+esc(found.icon)+'" alt="">':'')+'<span>'+esc(agent)+' — '+count+' fois</span></div>';}).join('');
+  return '<details class="player-stat-item"><summary class="player-stat-summary">'+esc(name)+' <small style="color:var(--muted);font-weight:400">· '+data.games+' parties</small></summary><div class="player-stat-detail"><strong>Rôles joués</strong><div class="role-bars">'+bars+'</div><strong>Agents les plus joués</strong><div class="agent-stat-list">'+(agentRows||'—')+'</div></div></details>';
  }).join('');
- host.innerHTML='<div class="stats-grid"><div class="stat-card"><strong>'+matchHistory.length+'</strong><span>PARTIES CONSERVÉES</span></div><div class="stat-card"><strong>'+Object.keys(agentCounts).length+'</strong><span>AGENTS DIFFÉRENTS TIRÉS</span></div><div class="stat-card"><strong>'+Object.keys(mapCounts).length+'</strong><span>CARTES DIFFÉRENTES</span></div></div><div class="stat-lists">'+list('TOP 5 AGENTS',top(agentCounts))+list('TOP 5 CARTES',top(mapCounts))+'</div><div class="section-no cyan" style="margin-top:22px">ANALYSE // PAR JOUEUR</div><h2 style="margin-bottom:10px">STATISTIQUES INDIVIDUELLES</h2><div class="player-stat-grid">'+(playerCards||'<div class="history-empty">Les statistiques individuelles apparaîtront après quelques parties enregistrées.</div>')+'</div>';
+ host.innerHTML='<div class="stats-grid"><div class="stat-card"><strong>'+matchHistory.length+'</strong><span>PARTIES CONSERVÉES</span></div><div class="stat-card"><strong>'+Object.keys(agentCounts).length+'</strong><span>AGENTS DIFFÉRENTS TIRÉS</span></div><div class="stat-card"><strong>'+Object.values(roleCounts).reduce((a,b)=>a+b,0)+'</strong><span>CHOIX DE RÔLES</span></div></div><div class="section-no cyan" style="margin-top:18px">RÉPARTITION GLOBALE DES RÔLES</div><div class="role-bars">'+roleBars+'</div><div class="stat-lists">'+list('TOP 5 AGENTS',top(agentCounts))+'</div><div class="section-no cyan" style="margin-top:22px">ANALYSE // PAR JOUEUR</div><h2 style="margin-bottom:10px">STATISTIQUES INDIVIDUELLES</h2><div class="player-stat-grid">'+(playerCards||'<div class="history-empty">Les statistiques individuelles apparaîtront après quelques parties enregistrées.</div>')+'</div>';
 }
 function copyHistoryMatch(index){
  const h=matchHistory[index];if(!h)return;
