@@ -213,7 +213,7 @@ function assignUnique(group){
   function backtrack(i,used){
    if(i===ordered.length)return true;
    const p=ordered[i],choices=useFallback?p.fallbackOptions:p.options;
-   for(const a of shuffle(choices)){
+   for(const a of choices){
     if(used.has(a.uuid))continue;
     used.add(a.uuid);result.set(p.id,a);
     if(backtrack(i+1,used))return true;
