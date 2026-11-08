@@ -77,6 +77,13 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
 .tournament-match select{max-width:170px;background:#1a2030;color:white;border:1px solid #354052;padding:7px;border-radius:4px}.tournament-match .versus{color:var(--muted);font:10px Consolas,monospace}.tournament-match .winner{color:var(--cyan);font-weight:800}
 .tournament-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:9px}.tournament-table th,.tournament-table td{text-align:left;padding:8px;border-bottom:1px solid #293342}.tournament-table th{color:#aab5c5;font:10px Consolas,monospace}
 .tournament-champion{padding:14px;background:#153a37;border:1px solid #25b9a9;color:#8ff6e8;font-weight:850;text-align:center;margin:12px 0}
+.tournament-draw{margin:8px 0 4px;padding:9px;background:#0c131d;border:1px solid #2d394a;border-radius:4px}.tournament-draw-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.tournament-draw-map{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px;font-weight:800}.tournament-draw-map img{width:110px;height:48px;object-fit:cover;border-radius:3px}
+.tournament-draw-teams{display:grid;grid-template-columns:1fr 1fr;gap:9px}.tournament-draw-team{background:#151e2b;padding:8px;border-left:2px solid var(--red);min-width:0}.tournament-draw-team.b{border-left-color:var(--cyan)}
+.tournament-draw-team>strong{display:block;font:10px Consolas,monospace;color:#aab5c5;margin-bottom:7px}.tournament-draw-player{display:flex;align-items:center;gap:7px;margin:5px 0;font-size:11px;min-width:0}
+.tournament-draw-player img{width:30px;height:30px;object-fit:cover;border-radius:3px;background:#303849}.tournament-draw-player span{min-width:0}.tournament-draw-player small{display:block;color:var(--muted);font-size:9px}
+.tournament-match-actions{display:flex;justify-content:flex-end;margin:7px 0}
+@media(max-width:600px){.tournament-draw-teams{grid-template-columns:1fr}.tournament-match{grid-template-columns:1fr auto 1fr}.tournament-match select{grid-column:1/-1;max-width:none;width:100%}}
 @media(max-width:800px){.tournament-layout{grid-template-columns:1fr}.tournament-fields{grid-template-columns:1fr 1fr}}@media(max-width:480px){.tournament-fields{grid-template-columns:1fr}.tournament-match{font-size:10px}.tournament-match select{max-width:110px}}
 @media(max-width:700px){.draw-style-options{grid-template-columns:1fr 1fr}}
 
@@ -145,10 +152,10 @@ const DEFAULT_MAPS=['Abyss','Ascent','Bind','Breeze','Corrode','Fracture','Haven
 const ROLE_ORDER=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
 let agents=[],maps=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',drawStyle='fun',lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
 let agentHistory={},mapHistory=[],matchHistory=[],agentMemoryLimit=5,mapMemoryLimit=5;
-let tournamentPlayers=[],tournament=null;
+let tournamentPlayers=[],tournament=null,tournamentAgentHistory={},tournamentMapHistory=[];
 const $=id=>document.getElementById(id);
-function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament}));}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
+function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
 function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
 function playable(a){return a.isPlayableCharacter!==false && a.role && a.displayIcon}
 async function loadData(){
@@ -223,8 +230,44 @@ function tournamentTeamName(id){const t=tournament?.teams?.find(x=>x.id===id);re
 function tournamentMatchHtml(m,r,i){
  const a=m.a?tournamentTeamName(m.a):'À déterminer',b=m.b?tournamentTeamName(m.b):'À déterminer';
  const opts=m.a&&m.b?'<option value="">Choisir le vainqueur…</option>'+[m.a,m.b].map(id=>'<option value="'+id+'" '+(m.winner===id?'selected':'')+'>'+esc(tournamentTeamName(id))+'</option>').join(''):'';
- return '<div class="tournament-match"><span class="'+(m.winner===m.a?'winner':'')+'">'+esc(a)+'</span><span class="versus">VS</span><span class="'+(m.winner===m.b?'winner':'')+'">'+esc(b)+'</span>'+(opts?'<select data-tourney-round="'+r+'" data-tourney-match="'+i+'">'+opts+'</select>':(m.winner?'<strong class="winner">✓</strong>':'<small>En attente</small>'))+'</div>';
+ const result=m.drawResult?renderTournamentDraw(m.drawResult):'',canDraw=Boolean(m.a&&m.b);
+ return '<div class="tournament-match"><span class="'+(m.winner===m.a?'winner':'')+'">'+esc(a)+'</span><span class="versus">VS</span><span class="'+(m.winner===m.b?'winner':'')+'">'+esc(b)+'</span>'+(opts?'<select data-tourney-round="'+r+'" data-tourney-match="'+i+'">'+opts+'</select>':(m.winner?'<strong class="winner">✓</strong>':'<small>En attente</small>'))+'</div>'+(canDraw?'<div class="tournament-match-actions"><button class="cyan" data-tournament-draw="'+m.id+'">'+(m.drawResult?'↻ Relancer agents + carte':'🎲 Tirer agents + carte')+'</button></div>':'<p class="draw-style-note">Le tirage sera disponible lorsque les deux équipes seront connues.</p>')+result;
 }
+function ensureTournamentMatchIds(){
+ if(!tournament)return;const all=tournament.phase==='groups'?(tournament.groups||[]).flatMap(g=>g.matches||[]):(tournament.rounds||[]).flat();
+ all.forEach(m=>{if(!m.id)m.id='match-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);});
+}
+function renderTournamentDraw(result){
+ const team=(items,label,cls)=>'<div class="tournament-draw-team '+cls+'"><strong>'+label+'</strong>'+items.map(x=>'<div class="tournament-draw-player"><img src="'+esc(x.icon)+'" alt=""><span><b>'+esc(x.player)+'</b><small>'+esc(x.agent)+' · '+esc(x.role)+'</small></span></div>').join('')+'</div>';
+ return '<div class="tournament-draw"><div class="tournament-draw-head"><strong>RÉSULTAT DU TIRAGE</strong><small>'+new Date(result.date).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})+'</small></div><div class="tournament-draw-map"><img src="'+esc(result.mapImage)+'" alt=""><span>🗺️ '+esc(result.map)+'</span></div><div class="tournament-draw-teams">'+team(result.a,'ÉQUIPE A','')+team(result.b,'ÉQUIPE B','b')+'</div></div>';
+}
+function tournamentTeamAssignment(teamId){
+ const team=tournament.teams.find(t=>t.id===teamId);if(!team)return null;
+ const list=team.players.map((name,index)=>{
+  const profile=players.find(p=>p.name.toLowerCase()===name.toLowerCase()),owned=profile?agents.filter(a=>(profile.agents||[]).includes(a.uuid)):agents.slice();
+  const pool=owned.length?owned:agents.slice(),history=tournamentAgentHistory[name]||[],fresh=pool.filter(a=>!history.includes(a.uuid)),roleCounts={};
+  matchHistory.forEach(h=>{const people=h.mode==='velocity'?(h.team||[]):[...(h.a||[]),...(h.b||[])];people.filter(x=>x.player===name).forEach(x=>{const role=x.role||'Autre';roleCounts[role]=(roleCounts[role]||0)+1;});});
+  const person={id:'tournament-'+name+'-'+index,name,favoriteAgents:profile?.favoriteAgents||[],preferredRoles:profile?.preferredRoles||[],roleCounts};
+  const order=items=>drawStyle==='serious'?shuffle(items).sort((a,b)=>{const af=person.favoriteAgents.includes(a.uuid)?1:0,bf=person.favoriteAgents.includes(b.uuid)?1:0,ar=person.preferredRoles.includes(roleName(a))?1:0,br=person.preferredRoles.includes(roleName(b))?1:0;return (bf-af)*100+(br-ar)*20+(roleCounts[roleName(a)]||0)-(roleCounts[roleName(b)]||0);}):shuffle(items);
+  person.options=order(fresh.length?fresh:pool);person.fallbackOptions=order(pool);return person;
+ });
+ const missing=list.filter(p=>!p.options.length);if(missing.length)return {error:'Aucun agent disponible pour : '+missing.map(p=>p.name).join(', ')};
+ const assigned=drawStyle==='serious'?bestAssignment(list):assignUnique(list);
+ if(!assigned)return {error:'Pas assez d’agents différents pour cette équipe. Vérifie les agents attribués aux joueurs dans la roulette.'};
+ return list.map(p=>({player:p.name,agent:assigned.get(p.id)}));
+}
+function drawTournamentMatch(matchId){
+ if(!agents.length||!maps.length){alert('Les agents et les cartes ne sont pas encore chargés.');return;}
+ const pool=maps.filter(m=>selectedMaps.has(m.uuid));if(!pool.length){alert('Aucune carte sélectionnée. Va dans l’onglet Roulette et coche au moins une carte.');return;}
+ const all=tournament.phase==='groups'?(tournament.groups||[]).flatMap(g=>g.matches||[]):(tournament.rounds||[]).flat(),match=all.find(m=>m.id===matchId);
+ if(!match||!match.a||!match.b)return;
+ const a=tournamentTeamAssignment(match.a),b=tournamentTeamAssignment(match.b);if(a?.error||b?.error){alert(a?.error||b?.error);return;}
+ const mapFresh=pool.filter(m=>!tournamentMapHistory.includes(m.uuid)),map=rand(mapFresh.length?mapFresh:pool),snapshot=items=>items.map(x=>({player:x.player,agent:x.agent.displayName,icon:x.agent.displayIcon,role:roleName(x.agent),uuid:x.agent.uuid}));
+ match.drawResult={date:new Date().toISOString(),map:map.displayName,mapImage:map.splash,mapUuid:map.uuid,a:snapshot(a),b:snapshot(b)};
+ [...a,...b].forEach(x=>{const old=tournamentAgentHistory[x.player]||[];tournamentAgentHistory[x.player]=[x.agent.uuid,...old.filter(id=>id!==x.agent.uuid)].slice(0,agentMemoryLimit);});
+ tournamentMapHistory=[map.uuid,...tournamentMapHistory.filter(id=>id!==map.uuid)].slice(0,mapMemoryLimit);save();renderTournamentBoard();
+}
+
 function groupStandings(g){
  const rows=g.teams.map(id=>({id,name:tournamentTeamName(id),played:0,wins:0,losses:0,points:0})),by=Object.fromEntries(rows.map(x=>[x.id,x]));
  g.matches.forEach(m=>{if(!m.winner||!m.a||!m.b)return;by[m.a].played++;by[m.b].played++;by[m.winner].wins++;by[m.winner].points+=3;by[m.winner===m.a?m.b:m.a].losses++;});
@@ -232,7 +275,7 @@ function groupStandings(g){
 }
 function renderTournamentBoard(){
  const host=$('tournamentBoard');if(!host)return;if(!tournament){host.innerHTML='<div class="history-empty">Aucun tournoi créé. Configure ton tournoi pour commencer.</div>';return;}
- const teams=tournament.teams||[];$('tournamentTeamCount').value=String(teams.length);$('tournamentTeamSize').value=String(tournament.teamSize||2);$('tournamentFormat').value=tournament.format||tournament.phase||'knockout';$('groupSizeField').style.display=tournament.phase==='groups'?'grid':'none';if(tournament.groupSize)$('tournamentGroupSize').value=String(tournament.groupSize);let html='<div class="history-head"><div><div class="section-no cyan">TABLEAU EN COURS</div><h2>'+esc(tournament.title||'TOURNOI')+'</h2></div><span class="count">'+teams.length+' équipes · '+tournament.teamSize+' joueurs / équipe</span></div>';
+ ensureTournamentMatchIds();const teams=tournament.teams||[];$('tournamentTeamCount').value=String(teams.length);$('tournamentTeamSize').value=String(tournament.teamSize||2);$('tournamentFormat').value=tournament.format||tournament.phase||'knockout';$('groupSizeField').style.display=tournament.phase==='groups'?'grid':'none';if(tournament.groupSize)$('tournamentGroupSize').value=String(tournament.groupSize);let html='<div class="history-head"><div><div class="section-no cyan">TABLEAU EN COURS</div><h2>'+esc(tournament.title||'TOURNOI')+'</h2></div><span class="count">'+teams.length+' équipes · '+tournament.teamSize+' joueurs / équipe</span></div>';
  html+='<div class="tournament-team-grid">'+teams.map(t=>'<div class="tournament-team-card"><strong>'+esc(t.name)+'</strong>'+t.players.map(esc).join('<br>')+'</div>').join('')+'</div><div class="history-actions"><button id="reshuffleTournament">↻ Refaire les équipes</button></div>';
  if(tournament.phase==='groups'){
   tournament.groups.forEach((g,gi)=>{const st=groupStandings(g);html+='<div class="tournament-group"><h3>POULE '+String.fromCharCode(65+gi)+'</h3><table class="tournament-table"><thead><tr><th>ÉQUIPE</th><th>J</th><th>V</th><th>D</th><th>PTS</th></tr></thead><tbody>'+st.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.played+'</td><td>'+x.wins+'</td><td>'+x.losses+'</td><td><strong>'+x.points+'</strong></td></tr>').join('')+'</tbody></table><h3 style="margin-top:16px">RENCONTRES</h3>'+g.matches.map((m,mi)=>tournamentMatchHtml(m,gi,mi)).join('')+'</div>';});
@@ -242,6 +285,7 @@ function renderTournamentBoard(){
   const final=tournament.rounds[tournament.rounds.length-1]?.[0];if(final?.winner)html+='<div class="tournament-champion">🏆 VAINQUEUR DU TOURNOI : '+esc(tournamentTeamName(final.winner))+'</div>';
  }
  host.innerHTML=html;
+ host.querySelectorAll('[data-tournament-draw]').forEach(btn=>btn.onclick=()=>drawTournamentMatch(btn.dataset.tournamentDraw));
  host.querySelectorAll('[data-tourney-round]').forEach(sel=>sel.onchange=()=>{const r=Number(sel.dataset.tourneyRound),i=Number(sel.dataset.tourneyMatch);if(tournament.phase==='groups')tournament.groups[r].matches[i].winner=sel.value||null;else{tournament.rounds[r][i].winner=sel.value||null;syncKnockout();}save();renderTournamentBoard();});
  const p=$('generatePlayoffs');if(p)p.onclick=generatePlayoffs;const sh=$('reshuffleTournament');if(sh)sh.onclick=()=>{if(confirm('Recréer les équipes et réinitialiser les résultats ?'))createTournament();};
 }
@@ -435,7 +479,7 @@ function copyHistoryMatch(index){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(fallback);else fallback();
 }
 function exportBackup(){
- const data={format:'valorant-randomizer-backup',version:2,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament};
+ const data={format:'valorant-randomizer-backup',version:3,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='valorant-randomizer-sauvegarde.json';a.click();URL.revokeObjectURL(url);
 }
@@ -452,7 +496,7 @@ function importBackup(file){
    matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];
    agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;
    mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;
-   tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;
+   tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];
    save();render();alert('Sauvegarde importée avec succès.');
   }catch(e){alert('Impossible d’importer ce fichier : sauvegarde invalide.');}
  };
