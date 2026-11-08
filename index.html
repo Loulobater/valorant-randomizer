@@ -65,6 +65,19 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
 .agent-card{position:relative}
 .agent-card .favorite-toggle{width:100%;margin-top:5px;padding:5px;font-size:10px;color:#e8c878;background:#292416;border-color:#66552b}
 .agent-card .favorite-toggle.selected{background:#59451b;border-color:#d6a63b;color:#ffe29a}
+.tournament-layout{display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,1fr);gap:18px}.tournament-roster,.tournament-setup{background:#111923;border:1px solid #293342;padding:14px;min-width:0}
+.tournament-roster h3,.tournament-setup h3{margin:0 0 12px;color:var(--cyan);font:12px Consolas,monospace;letter-spacing:1px}.tournament-add{padding:0 0 10px}
+.tournament-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.tournament-fields label{display:grid;gap:6px;font-size:11px;color:#aab5c5}
+.tournament-fields input,.tournament-fields select{width:100%;min-width:0;background:#0b111a;color:white;border:1px solid #354052;border-radius:4px;padding:10px}.tournament-setup>button{margin:5px 6px 0 0}
+.tournament-player{display:flex;align-items:center;gap:9px;padding:9px;background:#1a2030;border-left:2px solid var(--cyan)}.tournament-player input{accent-color:var(--cyan);width:17px;height:17px}
+.tournament-board{margin-top:18px}.tournament-team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:12px 0}
+.tournament-team-card{background:#1a2030;border:1px solid #303b4d;padding:10px;font-size:11px}.tournament-team-card strong{display:block;color:var(--cyan);margin-bottom:6px}
+.tournament-group,.tournament-round{background:#111923;border:1px solid #303b4d;padding:13px;margin:12px 0}.tournament-group h3,.tournament-round h3{margin:0 0 10px;color:var(--gold);font-size:14px}
+.tournament-match{display:grid;grid-template-columns:1fr auto 1fr auto;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #ffffff12;font-size:12px}
+.tournament-match select{max-width:170px;background:#1a2030;color:white;border:1px solid #354052;padding:7px;border-radius:4px}.tournament-match .versus{color:var(--muted);font:10px Consolas,monospace}.tournament-match .winner{color:var(--cyan);font-weight:800}
+.tournament-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:9px}.tournament-table th,.tournament-table td{text-align:left;padding:8px;border-bottom:1px solid #293342}.tournament-table th{color:#aab5c5;font:10px Consolas,monospace}
+.tournament-champion{padding:14px;background:#153a37;border:1px solid #25b9a9;color:#8ff6e8;font-weight:850;text-align:center;margin:12px 0}
+@media(max-width:800px){.tournament-layout{grid-template-columns:1fr}.tournament-fields{grid-template-columns:1fr 1fr}}@media(max-width:480px){.tournament-fields{grid-template-columns:1fr}.tournament-match{font-size:10px}.tournament-match select{max-width:110px}}
 @media(max-width:700px){.draw-style-options{grid-template-columns:1fr 1fr}}
 
 @media(max-width:700px){.app-tabs{padding:12px 10px 0;gap:5px}.app-tab{min-width:0;flex:1;padding:11px 5px;font-size:9px}.page-section{margin:14px auto;padding:0 15px 20px}.page-section .history-panel,.page-section .stats-panel{padding:12px}}
@@ -79,6 +92,7 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
  <button class="app-tab active" data-page="roulette">🎯 ROULETTE</button>
  <button class="app-tab" data-page="history">▤ HISTORIQUE</button>
  <button class="app-tab" data-page="statistics">📊 STATISTIQUES</button>
+ <button class="app-tab" data-page="tournament">🏆 TOURNOI</button>
 </nav>
 <main id="rouletteView">
 <section class="panel">
@@ -108,6 +122,20 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
 <section id="statisticsView" class="page-section">
  <section class="stats-panel"><div class="section-no cyan">04 // ANALYSE</div><h2>STATISTIQUES DES TIRAGES</h2><div id="statsContent"></div><div class="history-actions"><button id="exportBackup">↓ Exporter ma sauvegarde</button><button id="importBackup">↑ Importer une sauvegarde</button><input id="backupFile" type="file" accept=".json,application/json" hidden></div></section>
 </section>
+<section id="tournamentView" class="page-section" style="display:none"><section class="history-panel">
+ <div class="history-head"><div><div class="section-no cyan">05 // COMPÉTITION</div><h2>GESTION DU TOURNOI</h2></div><div class="count" id="tournamentPlayerCount">0 joueur sélectionné</div></div>
+ <div class="tournament-layout">
+  <div class="tournament-roster"><h3>PARTICIPANTS</h3><div class="addrow tournament-add"><input id="newTournamentPlayer" type="text" maxlength="22" placeholder="Pseudo du joueur"><button class="primary" id="addTournamentPlayer">＋ Ajouter</button></div>
+   <div class="history-actions"><button id="importRoulettePlayers">↓ Importer depuis la roulette</button><button id="selectTournamentPlayers">Tout cocher</button><button id="clearTournamentPlayers">Tout décocher</button></div><div id="tournamentPlayers" class="players"></div><p class="draw-style-note">Liste indépendante : les modifications ici ne changent pas la roulette.</p>
+  </div>
+  <div class="tournament-setup"><h3>CONFIGURATION</h3><div class="tournament-fields">
+   <label>Nombre d'équipes <input id="tournamentTeamCount" type="number" min="2" max="16" value="4"></label>
+   <label>Joueurs par équipe <select id="tournamentTeamSize"><option value="2">2 joueurs</option><option value="3">3 joueurs</option><option value="4">4 joueurs</option><option value="5">5 joueurs</option></select></label>
+   <label>Format <select id="tournamentFormat"><option value="knockout">Élimination directe</option><option value="groups">Poules puis phases finales</option></select></label>
+   <label id="groupSizeField">Équipes par poule <select id="tournamentGroupSize"><option value="3">3 équipes</option><option value="4" selected>4 équipes</option></select></label>
+  </div><div class="draw-style-note">Seuls les joueurs cochés dans cette liste participeront au tournoi.</div><button class="primary" id="createTournament">⚔ CRÉER LE TOURNOI</button><button class="ghost" id="resetTournament">Réinitialiser le tournoi</button></div>
+ </div><div id="tournamentBoard" class="tournament-board"><div class="history-empty">Aucun tournoi créé. Configure ton tournoi pour commencer.</div></div>
+</section></section>
 <div class="footer">FAN PROJECT // DONNÉES DE JEU FOURNIES PAR VALORANT-API.COM · NON AFFILIÉ À RIOT GAMES</div>
 <div class="modal" id="agentModal"><div class="dialog"><div class="dialog-head"><div><div class="section-no cyan">ARSENAL // SÉLECTION</div><h2 id="modalTitle">AGENTS DE JOUEUR</h2></div><button id="closeModal">✕ Fermer</button></div><div class="filters" id="roleFilters"></div><div class="preference-box"><div class="preference-title">RÔLES PRÉFÉRÉS · UTILISÉS EN MODE SÉRIEUX</div><div class="preference-roles" id="preferredRoleFilters"></div><div class="draw-style-note">Sélectionne un ou plusieurs rôles que ce joueur apprécie. En mode Fun, ces choix sont ignorés.</div></div><div class="filters"><button id="allAgents">Tous</button><button id="noAgents">Aucun</button></div><div class="agent-grid" id="agentGrid"></div></div></div>
 <script>
@@ -117,9 +145,10 @@ const DEFAULT_MAPS=['Abyss','Ascent','Bind','Breeze','Corrode','Fracture','Haven
 const ROLE_ORDER=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
 let agents=[],maps=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',drawStyle='fun',lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
 let agentHistory={},mapHistory=[],matchHistory=[],agentMemoryLimit=5,mapMemoryLimit=5;
+let tournamentPlayers=[],tournament=null;
 const $=id=>document.getElementById(id);
-function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit}));}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));}catch(e){players=[];}}
+function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament}));}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
 function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
 function playable(a){return a.isPlayableCharacter!==false && a.role && a.displayIcon}
 async function loadData(){
@@ -182,16 +211,59 @@ function renderMode(){
  $('subline').textContent=mode==='velocity'?'1 à 5 joueurs · une seule équipe · aucun tirage de carte':'2 à 10 joueurs · deux équipes équilibrées · une carte';
  renderCount();
 }
-function render(){renderPlayers();renderMaps();renderMode();renderDrawStyle();renderHistory();renderStats();}
+function render(){renderPlayers();renderMaps();renderMode();renderDrawStyle();renderHistory();renderStats();renderTournamentPlayers();renderTournamentBoard();}
+
+
+function renderTournamentPlayers(){
+ const host=$('tournamentPlayers');if(!host)return;host.innerHTML='';
+ $('tournamentPlayerCount').textContent=tournamentPlayers.filter(p=>p.active!==false).length+' joueur(s) sélectionné(s)';
+ tournamentPlayers.forEach(p=>{const row=document.createElement('div');row.className='tournament-player';row.innerHTML='<input type="checkbox" '+(p.active!==false?'checked':'')+'><strong>'+esc(p.name)+'</strong><button class="delete ghost" type="button" style="margin-left:auto">Supprimer</button>';row.querySelector('input').onchange=e=>{p.active=e.target.checked;save();renderTournamentPlayers();};row.querySelector('button').onclick=()=>{tournamentPlayers=tournamentPlayers.filter(x=>x.id!==p.id);save();renderTournamentPlayers();};host.appendChild(row);});
+}
+function tournamentTeamName(id){const t=tournament?.teams?.find(x=>x.id===id);return t?t.name:'À déterminer';}
+function tournamentMatchHtml(m,r,i){
+ const a=m.a?tournamentTeamName(m.a):'À déterminer',b=m.b?tournamentTeamName(m.b):'À déterminer';
+ const opts=m.a&&m.b?'<option value="">Choisir le vainqueur…</option>'+[m.a,m.b].map(id=>'<option value="'+id+'" '+(m.winner===id?'selected':'')+'>'+esc(tournamentTeamName(id))+'</option>').join(''):'';
+ return '<div class="tournament-match"><span class="'+(m.winner===m.a?'winner':'')+'">'+esc(a)+'</span><span class="versus">VS</span><span class="'+(m.winner===m.b?'winner':'')+'">'+esc(b)+'</span>'+(opts?'<select data-tourney-round="'+r+'" data-tourney-match="'+i+'">'+opts+'</select>':(m.winner?'<strong class="winner">✓</strong>':'<small>En attente</small>'))+'</div>';
+}
+function groupStandings(g){
+ const rows=g.teams.map(id=>({id,name:tournamentTeamName(id),played:0,wins:0,losses:0,points:0})),by=Object.fromEntries(rows.map(x=>[x.id,x]));
+ g.matches.forEach(m=>{if(!m.winner||!m.a||!m.b)return;by[m.a].played++;by[m.b].played++;by[m.winner].wins++;by[m.winner].points+=3;by[m.winner===m.a?m.b:m.a].losses++;});
+ return rows.sort((a,b)=>b.points-a.points||b.wins-a.wins||a.name.localeCompare(b.name));
+}
+function renderTournamentBoard(){
+ const host=$('tournamentBoard');if(!host)return;if(!tournament){host.innerHTML='<div class="history-empty">Aucun tournoi créé. Configure ton tournoi pour commencer.</div>';return;}
+ const teams=tournament.teams||[];let html='<div class="history-head"><div><div class="section-no cyan">TABLEAU EN COURS</div><h2>'+esc(tournament.title||'TOURNOI')+'</h2></div><span class="count">'+teams.length+' équipes · '+tournament.teamSize+' joueurs / équipe</span></div>';
+ html+='<div class="tournament-team-grid">'+teams.map(t=>'<div class="tournament-team-card"><strong>'+esc(t.name)+'</strong>'+t.players.map(esc).join('<br>')+'</div>').join('')+'</div><div class="history-actions"><button id="reshuffleTournament">↻ Refaire les équipes</button></div>';
+ if(tournament.phase==='groups'){
+  tournament.groups.forEach((g,gi)=>{const st=groupStandings(g);html+='<div class="tournament-group"><h3>POULE '+String.fromCharCode(65+gi)+'</h3><table class="tournament-table"><thead><tr><th>ÉQUIPE</th><th>J</th><th>V</th><th>D</th><th>PTS</th></tr></thead><tbody>'+st.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.played+'</td><td>'+x.wins+'</td><td>'+x.losses+'</td><td><strong>'+x.points+'</strong></td></tr>').join('')+'</tbody></table><h3 style="margin-top:16px">RENCONTRES</h3>'+g.matches.map((m,mi)=>tournamentMatchHtml(m,gi,mi)).join('')+'</div>';});
+  const done=tournament.groups.every(g=>g.matches.every(m=>m.winner));html+=done?'<button class="primary" id="generatePlayoffs">🏆 Générer les phases finales (2 qualifiés par poule)</button>':'<p class="draw-style-note">Renseigne les vainqueurs de toutes les rencontres pour débloquer les phases finales.</p>';
+ }else{
+  tournament.rounds.forEach((round,ri)=>{const label=round.length===1?'FINALE':round.length===2?'DEMI-FINALES':round.length===4?'QUARTS DE FINALE':'TOUR '+(ri+1);html+='<div class="tournament-round"><h3>'+label+'</h3>'+round.map((m,mi)=>tournamentMatchHtml(m,ri,mi)).join('')+'</div>';});
+  const final=tournament.rounds[tournament.rounds.length-1]?.[0];if(final?.winner)html+='<div class="tournament-champion">🏆 VAINQUEUR DU TOURNOI : '+esc(tournamentTeamName(final.winner))+'</div>';
+ }
+ host.innerHTML=html;
+ host.querySelectorAll('[data-tourney-round]').forEach(sel=>sel.onchange=()=>{const r=Number(sel.dataset.tourneyRound),i=Number(sel.dataset.tourneyMatch);if(tournament.phase==='groups')tournament.groups[r].matches[i].winner=sel.value||null;else{tournament.rounds[r][i].winner=sel.value||null;syncKnockout();}save();renderTournamentBoard();});
+ const p=$('generatePlayoffs');if(p)p.onclick=generatePlayoffs;const sh=$('reshuffleTournament');if(sh)sh.onclick=()=>{if(confirm('Recréer les équipes et réinitialiser les résultats ?'))createTournament();};
+}
+function syncKnockout(){const rounds=tournament.rounds;for(let r=1;r<rounds.length;r++)rounds[r].forEach((m,i)=>{m.a=rounds[r-1][i*2]?.winner||null;m.b=rounds[r-1][i*2+1]?.winner||null;m.winner=m.a&&!m.b?m.a:null;});}
+function buildKnockout(ids){const first=[];for(let i=0;i<ids.length;i+=2){const a=ids[i],b=ids[i+1]||null;first.push({a,b,winner:b?null:a});}const rounds=[first];let n=first.length;while(n>1){n=Math.ceil(n/2);rounds.push(Array.from({length:n},()=>({a:null,b:null,winner:null})));}tournament.phase='knockout';tournament.rounds=rounds;tournament.groups=[];syncKnockout();}
+function generatePlayoffs(){const ids=[];tournament.groups.forEach(g=>groupStandings(g).slice(0,2).forEach(x=>ids.push(x.id)));if(ids.length<2){alert('Il faut au moins deux équipes qualifiées.');return;}buildKnockout(shuffle(ids));save();renderTournamentBoard();}
+function createTournament(){
+ const count=Math.max(2,Math.min(16,Number($('tournamentTeamCount').value)||2)),size=Math.max(2,Math.min(5,Number($('tournamentTeamSize').value)||2)),chosen=tournamentPlayers.filter(p=>p.active!==false),needed=count*size;
+ if(chosen.length<needed){alert('Il faut '+needed+' joueurs sélectionnés pour créer '+count+' équipes de '+size+'. Il en manque '+(needed-chosen.length)+'.');return;}
+ const picked=shuffle(chosen).slice(0,needed),teams=[];for(let i=0;i<count;i++)teams.push({id:'team-'+(i+1),name:'Équipe '+(i+1),players:picked.slice(i*size,(i+1)*size).map(p=>p.name)});
+ tournament={title:'TOURNOI VALORANT',teamSize:size,format:$('tournamentFormat').value,teams,phase:$('tournamentFormat').value==='groups'?'groups':'knockout',groups:[],rounds:[]};
+ if(tournament.phase==='groups'){const sizeGroup=Number($('tournamentGroupSize').value)||4,groupCount=Math.ceil(count/sizeGroup),groups=[];teams.forEach((t,i)=>{const gi=i%groupCount;(groups[gi]||(groups[gi]={teams:[],matches:[]})).teams.push(t.id);});groups.forEach(g=>{for(let i=0;i<g.teams.length;i++)for(let j=i+1;j<g.teams.length;j++)g.matches.push({a:g.teams[i],b:g.teams[j],winner:null});});tournament.groups=groups;}else buildKnockout(teams.map(t=>t.id));
+ save();renderTournamentBoard();
+}
 
 function showPage(page){
- const roulette=$('rouletteView'),history=$('historyView'),statistics=$('statisticsView');
- roulette.style.display=page==='roulette'?'grid':'none';
- history.style.display=page==='history'?'block':'none';
- statistics.style.display=page==='statistics'?'block':'none';
+ const roulette=$('rouletteView'),history=$('historyView'),statistics=$('statisticsView'),tourney=$('tournamentView');
+ roulette.style.display=page==='roulette'?'grid':'none';history.style.display=page==='history'?'block':'none';statistics.style.display=page==='statistics'?'block':'none';tourney.style.display=page==='tournament'?'block':'none';
  document.querySelectorAll('.app-tab').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
  if(page==='history')renderHistory();
  if(page==='statistics')renderStats();
+ if(page==='tournament'){renderTournamentPlayers();renderTournamentBoard();}
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function openAgents(id){
@@ -362,7 +434,7 @@ function copyHistoryMatch(index){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(fallback);else fallback();
 }
 function exportBackup(){
- const data={format:'valorant-randomizer-backup',version:1,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit};
+ const data={format:'valorant-randomizer-backup',version:2,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='valorant-randomizer-sauvegarde.json';a.click();URL.revokeObjectURL(url);
 }
@@ -379,6 +451,7 @@ function importBackup(file){
    matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];
    agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;
    mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;
+   tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;
    save();render();alert('Sauvegarde importée avec succès.');
   }catch(e){alert('Impossible d’importer ce fichier : sauvegarde invalide.');}
  };
@@ -460,6 +533,14 @@ $('historyList').onclick=e=>{const btn=e.target.closest('[data-copy-match]');if(
 $('exportBackup').onclick=exportBackup;
 $('importBackup').onclick=()=>$('backupFile').click();
 $('backupFile').onchange=e=>{const file=e.target.files[0];if(file)importBackup(file);e.target.value='';};
+$('addTournamentPlayer').onclick=()=>{const name=$('newTournamentPlayer').value.trim();if(!name)return;if(tournamentPlayers.some(p=>p.name.toLowerCase()===name.toLowerCase())){alert('Ce joueur existe déjà dans la liste tournoi.');return;}tournamentPlayers.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),name,active:true});$('newTournamentPlayer').value='';save();renderTournamentPlayers();};
+$('newTournamentPlayer').addEventListener('keydown',e=>{if(e.key==='Enter')$('addTournamentPlayer').click();});
+$('importRoulettePlayers').onclick=()=>{let n=0;players.forEach(p=>{if(!tournamentPlayers.some(t=>t.name.toLowerCase()===p.name.toLowerCase())){tournamentPlayers.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),name:p.name,active:true});n++;}});save();renderTournamentPlayers();alert(n+' joueur(s) importé(s). Les deux listes restent indépendantes.');};
+$('selectTournamentPlayers').onclick=()=>{tournamentPlayers.forEach(p=>p.active=true);save();renderTournamentPlayers();};
+$('clearTournamentPlayers').onclick=()=>{tournamentPlayers.forEach(p=>p.active=false);save();renderTournamentPlayers();};
+$('createTournament').onclick=createTournament;
+$('resetTournament').onclick=()=>{if(confirm('Supprimer le tournoi et ses résultats ?')){tournament=null;save();renderTournamentBoard();}};
+$('tournamentFormat').onchange=e=>{$('groupSizeField').style.display=e.target.value==='groups'?'grid':'none';};$('tournamentFormat').dispatchEvent(new Event('change'));
 $('clearHistory').onclick=()=>{if(!matchHistory.length)return;if(confirm('Effacer tout l’historique des parties ?')){matchHistory=[];save();renderHistory();renderStats();}};
 $('copy').onclick=async()=>{const t=discordText();if(!t){fail('Lance un tirage avant de copier le résultat.');return;}try{await navigator.clipboard.writeText(t);$('copy').textContent='✓ Copié !';setTimeout(()=>$('copy').textContent='▢ Copier pour Discord',1600);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();$('copy').textContent='✓ Copié !';setTimeout(()=>$('copy').textContent='▢ Copier pour Discord',1600);}};
 load();render();loadData();
