@@ -152,11 +152,11 @@ const STORAGE='valorant-randomizer-v1';
 const DEFAULT_MAPS=['Abyss','Ascent','Bind','Breeze','Corrode','Fracture','Haven','Icebox','Lotus','Pearl','Split','Summit','Sunset'];
 const ROLE_ORDER=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
 let agents=[],maps=[],weapons=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',drawStyle='fun',weaponRestrictionEnabled=false,lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
-let agentHistory={},mapHistory=[],matchHistory=[],agentMemoryLimit=5,mapMemoryLimit=5;
+let agentHistory={},mapHistory=[],matchHistory=[],weaponHistory=[],agentMemoryLimit=5,mapMemoryLimit=5;
 let tournamentPlayers=[],tournament=null,tournamentAgentHistory={},tournamentMapHistory=[];
 const $=id=>document.getElementById(id);
-function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';weaponRestrictionEnabled=d.weaponRestrictionEnabled===true;players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
+function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,agentHistory,mapHistory,matchHistory,weaponHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];weaponHistory=Array.isArray(d.weaponHistory)?d.weaponHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';weaponRestrictionEnabled=d.weaponRestrictionEnabled===true;players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
 function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
 function playable(a){return a.isPlayableCharacter!==false && a.role && a.displayIcon}
 async function loadData(){
@@ -166,7 +166,7 @@ async function loadData(){
   if(!ar.ok||!mr.ok||!wr.ok)throw new Error('API indisponible');
   const [aj,mj,wj]=await Promise.all([ar.json(),mr.json(),wr.json()]);
   agents=(aj.data||[]).filter(playable).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));
-  weapons=(wj.data||[]).filter(w=>w.displayName&&w.displayIcon&&!String(w.category||'').toLowerCase().includes('melee')&&!String(w.category||'').toLowerCase().includes('sidearm')).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));
+  weapons=(wj.data||[]).filter(w=>w.displayName&&w.displayIcon&&!String(w.category||'').toLowerCase().includes('melee')&&!String(w.category||'').toLowerCase().includes('sidearm')).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));weaponHistory=weaponHistory.filter(id=>weapons.some(w=>w.uuid===id));
   const all=(mj.data||[]).filter(m=>m.displayName&&m.splash);
   maps=DEFAULT_MAPS.map(n=>all.find(m=>m.displayName.toLowerCase()===n.toLowerCase())).filter(Boolean);
   if(!maps.length)maps=all.filter(m=>!['The Range','Basic Training','District','Kasbah','Piazza','Drift','Glitch','HURM'].includes(m.displayName));
@@ -420,7 +420,7 @@ function availableMaps(){
  const fresh=pool.filter(m=>!mapHistory.includes(m.uuid));
  return fresh.length?fresh:pool;
 }
-function drawBannedWeapon(){return weaponRestrictionEnabled?rand(weapons):null;}
+function drawBannedWeapon(){if(!weaponRestrictionEnabled)return null;let fresh=weapons.filter(w=>!weaponHistory.includes(w.uuid));if(!fresh.length){weaponHistory=[];fresh=weapons;}const chosen=rand(fresh);weaponHistory.push(chosen.uuid);save();return chosen;}
 function renderWeaponBan(weapon){
  const host=$('weaponBanResult');if(!host)return;
  host.innerHTML=weapon?'<div class="weapon-ban"><img src="'+esc(weapon.displayIcon)+'" alt="'+esc(weapon.displayName)+'"><div><strong>🚫 ARME INTERDITE POUR TOUTE LA PARTIE</strong><span>'+esc(weapon.displayName)+'</span><small>Cette arme ne doit être utilisée par aucun joueur.</small></div></div>':'';
@@ -487,7 +487,7 @@ function copyHistoryMatch(index){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(fallback);else fallback();
 }
 function exportBackup(){
- const data={format:'valorant-randomizer-backup',version:4,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory};
+ const data={format:'valorant-randomizer-backup',version:5,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,agentHistory,mapHistory,matchHistory,weaponHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='valorant-randomizer-sauvegarde.json';a.click();URL.revokeObjectURL(url);
 }
@@ -502,6 +502,7 @@ function importBackup(file){
    agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};
    mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];
    matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];
+   weaponHistory=Array.isArray(d.weaponHistory)?d.weaponHistory:[];
    agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;
    mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;
    tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];
