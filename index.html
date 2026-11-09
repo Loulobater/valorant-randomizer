@@ -166,7 +166,7 @@ async function loadData(){
   if(!ar.ok||!mr.ok||!wr.ok)throw new Error('API indisponible');
   const [aj,mj,wj]=await Promise.all([ar.json(),mr.json(),wr.json()]);
   agents=(aj.data||[]).filter(playable).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));
-  weapons=(wj.data||[]).filter(w=>w.displayName&&w.displayIcon&&!String(w.category||'').toLowerCase().includes('melee')).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));
+  weapons=(wj.data||[]).filter(w=>w.displayName&&w.displayIcon&&!String(w.category||'').toLowerCase().includes('melee')&&!String(w.category||'').toLowerCase().includes('sidearm')).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));
   const all=(mj.data||[]).filter(m=>m.displayName&&m.splash);
   maps=DEFAULT_MAPS.map(n=>all.find(m=>m.displayName.toLowerCase()===n.toLowerCase())).filter(Boolean);
   if(!maps.length)maps=all.filter(m=>!['The Range','Basic Training','District','Kasbah','Piazza','Drift','Glitch','HURM'].includes(m.displayName));
