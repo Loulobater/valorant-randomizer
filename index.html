@@ -56,7 +56,7 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
 .draw-style-options button{padding:12px 8px;font-size:12px;letter-spacing:1px}
 .draw-style-options button.active.fun{background:#35263d;border-color:#ad73d0;color:#f0d5ff}
 .draw-style-options button.active.serious{background:#153a37;border-color:#25b9a9;color:#8ff6e8}
-.draw-style-note{font-size:11px;color:#9ba8ba;line-height:1.5}
+.draw-style-note{font-size:11px;color:#9ba8ba;line-height:1.5}\n.weapon-toggle{display:flex;align-items:flex-start;gap:10px;padding:11px;background:#101722;border:1px solid #303b4d;cursor:pointer}.weapon-toggle input{width:17px;height:17px;accent-color:var(--red);margin:2px 0 0}.weapon-toggle span{display:grid;gap:4px}.weapon-toggle strong{font:11px Consolas,monospace;letter-spacing:1px;color:#ff8992}.weapon-toggle small{font-size:10px;color:#9ba8ba;line-height:1.4}.weapon-ban{display:flex;align-items:center;gap:14px;padding:12px 15px;background:linear-gradient(100deg,#35151d,#171c28);border:1px solid #a93648}.weapon-ban img{width:90px;height:55px;object-fit:contain;background:#0b1019;border:1px solid #57313b;border-radius:3px}.weapon-ban strong{display:block;color:#ff8992;font:12px Consolas,monospace;letter-spacing:1px}.weapon-ban span{display:block;font-size:17px;font-weight:900;margin-top:4px;text-transform:uppercase}.weapon-ban small{display:block;color:#aab5c5;font-size:10px;margin-top:3px}
 .preference-box{background:#101722;border:1px solid #303b4d;padding:12px;margin:12px 0}
 .preference-title{font:10px Consolas,monospace;letter-spacing:1px;color:var(--gold);margin-bottom:8px}
 .preference-roles{display:flex;flex-wrap:wrap;gap:6px}
@@ -110,8 +110,9 @@ input,button{font:inherit}input[type=text]{min-width:0;background:#111923;color:
 </section>
 <section class="center">
  <div class="mode-tabs"><button class="active custom" id="customTab">⚔ PERSONNALISÉ</button><button class="velocity" id="velocityTab">ϟ VÉLOCITÉ / NON CLASSÉ</button></div>
- <div class="draw-style" id="drawStylePanel"><div class="draw-style-head">STYLE DE TIRAGE</div><div class="draw-style-options"><button type="button" class="active fun" id="funMode">🎲 MODE FUN</button><button type="button" id="seriousMode">🏆 MODE SÉRIEUX</button></div><div class="draw-style-note" id="drawStyleNote">Tout est aléatoire : les préférences et l'équilibrage des rôles sont ignorés.</div></div>
+ <div class="draw-style" id="drawStylePanel"><div class="draw-style-head">STYLE DE TIRAGE</div><div class="draw-style-options"><button type="button" class="active fun" id="funMode">🎲 MODE FUN</button><button type="button" id="seriousMode">🏆 MODE SÉRIEUX</button></div><div class="draw-style-note" id="drawStyleNote">Tout est aléatoire : les préférences et l'équilibrage des rôles sont ignorés.</div><label class="weapon-toggle"><input type="checkbox" id="weaponRestrictionToggle"><span><strong>🔫 RESTRICTIONS D’ARMES</strong><small>Une arme à feu aléatoire sera interdite à tous les joueurs pendant la partie.</small></span></label></div>
  <div class="hero" id="hero"><div class="hero-art" id="heroArt"></div><div class="hero-copy"><div class="hero-label" id="heroLabel">CARTE TIRÉE</div><h1 id="heroTitle">PRÊT ?</h1></div></div>
+ <div id="weaponBanResult"></div>
  <div class="actions"><button class="primary roll" id="roll">⟳ LANCER LE TIRAGE</button><button class="copy" id="copy">▢ Copier pour Discord</button></div>
  <div class="subline" id="subline">Sélectionne les joueurs et leurs agents pour commencer.</div>
  <div class="error" id="error"></div>
@@ -150,21 +151,22 @@ const API='https://valorant-api.com/v1';
 const STORAGE='valorant-randomizer-v1';
 const DEFAULT_MAPS=['Abyss','Ascent','Bind','Breeze','Corrode','Fracture','Haven','Icebox','Lotus','Pearl','Split','Summit','Sunset'];
 const ROLE_ORDER=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
-let agents=[],maps=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',drawStyle='fun',lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
+let agents=[],maps=[],weapons=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',drawStyle='fun',weaponRestrictionEnabled=false,lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
 let agentHistory={},mapHistory=[],matchHistory=[],agentMemoryLimit=5,mapMemoryLimit=5;
 let tournamentPlayers=[],tournament=null,tournamentAgentHistory={},tournamentMapHistory=[];
 const $=id=>document.getElementById(id);
-function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
+function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';weaponRestrictionEnabled=d.weaponRestrictionEnabled===true;players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
 function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
 function playable(a){return a.isPlayableCharacter!==false && a.role && a.displayIcon}
 async function loadData(){
  $('subline').textContent='Chargement des agents et des cartes…';
  try{
-  const [ar,mr]=await Promise.all([fetch(API+'/agents?isPlayableCharacter=true&language=en-US'),fetch(API+'/maps?language=en-US')]);
-  if(!ar.ok||!mr.ok)throw new Error('API indisponible');
-  const [aj,mj]=await Promise.all([ar.json(),mr.json()]);
+  const [ar,mr,wr]=await Promise.all([fetch(API+'/agents?isPlayableCharacter=true&language=en-US'),fetch(API+'/maps?language=en-US'),fetch(API+'/weapons?language=en-US')]);
+  if(!ar.ok||!mr.ok||!wr.ok)throw new Error('API indisponible');
+  const [aj,mj,wj]=await Promise.all([ar.json(),mr.json(),wr.json()]);
   agents=(aj.data||[]).filter(playable).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));
+  weapons=(wj.data||[]).filter(w=>w.displayName&&w.displayIcon&&!String(w.category||'').toLowerCase().includes('melee')).sort((a,b)=>a.displayName.localeCompare(b.displayName,'fr'));
   const all=(mj.data||[]).filter(m=>m.displayName&&m.splash);
   maps=DEFAULT_MAPS.map(n=>all.find(m=>m.displayName.toLowerCase()===n.toLowerCase())).filter(Boolean);
   if(!maps.length)maps=all.filter(m=>!['The Range','Basic Training','District','Kasbah','Piazza','Drift','Glitch','HURM'].includes(m.displayName));
@@ -408,6 +410,7 @@ function bestAssignment(group){
 function renderDrawStyle(){
  $('funMode').classList.toggle('active',drawStyle==='fun');$('funMode').classList.toggle('fun',drawStyle==='fun');
  $('seriousMode').classList.toggle('active',drawStyle==='serious');$('seriousMode').classList.toggle('serious',drawStyle==='serious');
+ $('weaponRestrictionToggle').checked=weaponRestrictionEnabled;
  $('drawStyleNote').textContent=drawStyle==='fun'
   ?'Tout est aléatoire : les préférences et l’équilibrage des rôles sont ignorés. L’anti-répétition des agents reste actif.'
   :'Les agents et rôles préférés sont privilégiés, et la composition de chaque équipe cherche à varier les rôles.';
@@ -416,6 +419,11 @@ function availableMaps(){
  const pool=maps.filter(m=>selectedMaps.has(m.uuid));
  const fresh=pool.filter(m=>!mapHistory.includes(m.uuid));
  return fresh.length?fresh:pool;
+}
+function drawBannedWeapon(){return weaponRestrictionEnabled?rand(weapons):null;}
+function renderWeaponBan(weapon){
+ const host=$('weaponBanResult');if(!host)return;
+ host.innerHTML=weapon?'<div class="weapon-ban"><img src="'+esc(weapon.displayIcon)+'" alt="'+esc(weapon.displayName)+'"><div><strong>🚫 ARME INTERDITE POUR TOUTE LA PARTIE</strong><span>'+esc(weapon.displayName)+'</span><small>Cette arme ne doit être utilisée par aucun joueur.</small></div></div>':'';
 }
 function rememberResult(res){
  const entries=res.mode==='velocity'?res.team:[...res.a,...res.b];
@@ -427,7 +435,7 @@ function rememberResult(res){
   mapHistory=[res.map.uuid,...mapHistory.filter(id=>id!==res.map.uuid)].slice(0,mapMemoryLimit);
  }
  const snapshot=items=>items.map(({player,agent})=>({player:player.name,agent:agent.displayName,icon:agent.displayIcon,role:roleName(agent)}));
- const entry={id:Date.now(),date:new Date().toISOString(),mode:res.mode,map:res.mode==='custom'?res.map.displayName:null,mapImage:res.mode==='custom'?res.map.splash:null,a:res.mode==='custom'?snapshot(res.a):[],b:res.mode==='custom'?snapshot(res.b):[],team:res.mode==='velocity'?snapshot(res.team):[]};
+ const entry={id:Date.now(),date:new Date().toISOString(),mode:res.mode,map:res.mode==='custom'?res.map.displayName:null,mapImage:res.mode==='custom'?res.map.splash:null,weapon:res.weapon?res.weapon.displayName:null,weaponImage:res.weapon?res.weapon.displayIcon:null,a:res.mode==='custom'?snapshot(res.a):[],b:res.mode==='custom'?snapshot(res.b):[],team:res.mode==='velocity'?snapshot(res.team):[]};
  matchHistory=[entry,...matchHistory].slice(0,20);
  save();
  renderHistory();
@@ -479,7 +487,7 @@ function copyHistoryMatch(index){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(fallback);else fallback();
 }
 function exportBackup(){
- const data={format:'valorant-randomizer-backup',version:3,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory};
+ const data={format:'valorant-randomizer-backup',version:4,exportedAt:new Date().toISOString(),players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,agentHistory,mapHistory,matchHistory,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='valorant-randomizer-sauvegarde.json';a.click();URL.revokeObjectURL(url);
 }
@@ -490,7 +498,7 @@ function importBackup(file){
    const d=JSON.parse(reader.result);
    if(d.format!=='valorant-randomizer-backup'||!Array.isArray(d.players)||!Array.isArray(d.selectedMaps))throw new Error('Fichier non reconnu');
    if(!confirm('Importer cette sauvegarde ? Les données actuelles seront remplacées.'))return;
-   players=d.players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));selectedMaps=new Set(d.selectedMaps);hasSavedMapSelection=true;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';
+   players=d.players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[]}));selectedMaps=new Set(d.selectedMaps);hasSavedMapSelection=true;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';weaponRestrictionEnabled=d.weaponRestrictionEnabled===true;
    agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};
    mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];
    matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];
@@ -509,6 +517,7 @@ function renderTeam(title,items,team){
 }
 function renderResult(res){
  lastResult=res;
+ renderWeaponBan(res.weapon);
  rememberResult(res);
  if(res.mode==='velocity'){
   $('heroLabel').textContent='ÉQUIPE VÉLOCITÉ';$('heroTitle').textContent='NON CLASSÉ';
@@ -524,13 +533,14 @@ function renderResult(res){
 }
 async function doRoll(){
  if(rolling)return;clearError();
+ if(weaponRestrictionEnabled&&!weapons.length){fail('Impossible de charger la liste des armes. Vérifie ta connexion puis actualise la page.');return;}
  const list=preparePlayers();
  if(mode==='velocity'){
   if(list.length<1){fail('Coche au moins un joueur pour lancer le tirage.');return;}
   if(list.length>5){fail('Il faut 5 joueurs maximum en Vélocité. Décoche au moins '+(list.length-5)+' joueur(s).');return;}
   const missing=list.filter(p=>!p.options.length);if(missing.length){fail('Agent manquant pour : '+missing.map(p=>p.name).join(', ')+'. Sélectionne au moins un agent pour chacun.');return;}
   const assigned=drawStyle==='serious'?bestAssignment(list):assignUnique(list);if(!assigned){fail('Tirage impossible : pas assez d’agents différents pour éviter les doublons dans l’équipe.');return;}
-  const res={mode:'velocity',team:list.map(p=>({player:p,agent:assigned.get(p.id)}))};renderResult(res);$('roll').textContent='ϟ RELANCER LE TIRAGE';return;
+  const res={mode:'velocity',team:list.map(p=>({player:p,agent:assigned.get(p.id)})),weapon:drawBannedWeapon()};renderResult(res);$('roll').textContent='ϟ RELANCER LE TIRAGE';return;
  }
  if(list.length<2||list.length>10){fail('Le mode Personnalisé nécessite entre 2 et 10 joueurs cochés.');return;}
  if(selectedMaps.size===0){fail('Aucune carte cochée. Sélectionne au moins une carte.');return;}
@@ -546,7 +556,7 @@ async function doRoll(){
  }
  if(!found){fail('Tirage impossible : il manque des agents différents pour éviter les doublons dans au moins une équipe. Ajoute des agents aux joueurs ou modifie les participants.');return;}
  const mapPool=availableMaps();
- const res={mode:'custom',players:list,map:rand(mapPool),...found};
+ const res={mode:'custom',players:list,map:rand(mapPool),weapon:drawBannedWeapon(),...found};
  await animateThen(()=>renderResult(res),mapPool.map(m=>m.displayName));
 }
 async function animateThen(done,words){
@@ -556,12 +566,14 @@ async function animateThen(done,words){
 }
 function discordText(){
  if(!lastResult)return '';
- if(lastResult.mode==='velocity')return '**⚡ VÉLOCITÉ / NON CLASSÉ**\n'+lastResult.team.map((x,i)=>`${i+1}. **${x.player.name}** — ${x.agent.displayName}`).join('\n');
- return `**🎯 ROUELETTE AGENT VALORANT**\n🗺️ Carte : **${lastResult.map.displayName}**\n\n🔴 **ÉQUIPE A · ATTAQUE**\n${lastResult.a.map(x=>`• **${x.player.name}** — ${x.agent.displayName}`).join('\n')}\n\n🔵 **ÉQUIPE B · DÉFENSE**\n${lastResult.b.map(x=>`• **${x.player.name}** — ${x.agent.displayName}`).join('\n')}`;
+ const weaponLine=lastResult.weapon?'\n🚫 **ARME INTERDITE : '+lastResult.weapon.displayName+'**':'';
+ if(lastResult.mode==='velocity')return '**⚡ VÉLOCITÉ / NON CLASSÉ**'+weaponLine+'\n'+lastResult.team.map((x,i)=>`${i+1}. **${x.player.name}** — ${x.agent.displayName}`).join('\n');
+ return `**🎯 ROUELETTE AGENT VALORANT**\n🗺️ Carte : **${lastResult.map.displayName}**`+weaponLine+`\n\n🔴 **ÉQUIPE A · ATTAQUE**\n${lastResult.a.map(x=>`• **${x.player.name}** — ${x.agent.displayName}`).join('\n')}\n\n🔵 **ÉQUIPE B · DÉFENSE**\n${lastResult.b.map(x=>`• **${x.player.name}** — ${x.agent.displayName}`).join('\n')}`;
 }
 document.querySelectorAll('.app-tab').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 $('addPlayer').onclick=()=>{const name=$('newPlayer').value.trim();if(!name)return;if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){alert('Ce pseudo existe déjà.');return;}if(players.length>=20){alert('Maximum 20 joueurs enregistrés.');return;}players.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),name,active:true,agents:[]});$('newPlayer').value='';save();renderPlayers();};
 $('newPlayer').addEventListener('keydown',e=>{if(e.key==='Enter')$('addPlayer').click();});
+$('weaponRestrictionToggle').onchange=e=>{weaponRestrictionEnabled=e.target.checked;save();clearError();if(!weaponRestrictionEnabled)renderWeaponBan(null);};
 $('funMode').onclick=()=>{drawStyle='fun';save();renderDrawStyle();clearError();};
 $('seriousMode').onclick=()=>{drawStyle='serious';save();renderDrawStyle();clearError();};
 $('customTab').onclick=()=>{mode='custom';lastResult=null;$('results').innerHTML='';save();renderMode();clearError();};
