@@ -1,0 +1,17 @@
+{
+  "name": "valorant-randomizer-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bot Discord public pour Valorant Randomizer",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.22.1",
+    "dotenv": "^16.4.7"
+  }
+}
