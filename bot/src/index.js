@@ -310,7 +310,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   } catch (error) {
     console.error("Erreur lors du traitement d'une interaction :", error);
-    if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+    if (interaction.isRepliable() && interaction.deferred) {
+      await interaction.editReply("Une erreur est survenue pendant le tirage. Vérifie ta connexion et réessaie.").catch(() => {});
+    } else if (interaction.isRepliable() && !interaction.replied) {
       await interaction.reply({
         content: "Une erreur est survenue. Réessaie dans un instant.",
         ephemeral: true
