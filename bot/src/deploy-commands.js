@@ -38,8 +38,8 @@ const rest = new REST({ version: "10" }).setToken(token);
 (async () => {
   try {
     console.log("Enregistrement des commandes Discord...");
-    await rest.put(Routes.applicationCommands(clientId), { body: commands });
-    console.log("Commandes /roulette, /tirage et /fermer enregistrées.");
+    await rest.put(Routes.applicationGuildCommands(clientId, "1569459621830201396"), { body: commands });
+    console.log("Commandes /roulette, /tirage et /fermer enregistrées sur le serveur de test.");
   } catch (error) {
     console.error("Impossible d'enregistrer les commandes :", error);
     process.exit(1);
