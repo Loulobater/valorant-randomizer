@@ -22,6 +22,14 @@ const commands = [
         .setMaxValue(10)
         .setRequired(false)
     )
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName("tirage")
+    .setDescription("Lancer un tirage aléatoire des équipes")
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName("fermer")
+    .setDescription("Fermer la session Valorant en cours")
     .toJSON()
 ];
 
@@ -29,9 +37,9 @@ const rest = new REST({ version: "10" }).setToken(token);
 
 (async () => {
   try {
-    console.log("Enregistrement de la commande /roulette...");
+    console.log("Enregistrement des commandes Discord...");
     await rest.put(Routes.applicationCommands(clientId), { body: commands });
-    console.log("Commande /roulette enregistrée. Elle peut prendre quelques minutes à apparaître.");
+    console.log("Commandes /roulette, /tirage et /fermer enregistrées.");
   } catch (error) {
     console.error("Impossible d'enregistrer les commandes :", error);
     process.exit(1);
