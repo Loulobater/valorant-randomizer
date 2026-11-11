@@ -23,6 +23,21 @@ const sessions = new Map();
 const SESSION_TIMEOUT_MS = 120 * 60 * 1000;
 let gameDataCache = null;
 
+// Cartes réservées aux modes spéciaux (match à mort par équipe, escarmouche,
+// entraînement, etc.) : elles ne doivent pas apparaître dans la roulette classique.
+const EXCLUDED_MAP_NAMES = new Set([
+  "the range",
+  "range",
+  "escarmouche",
+  "skirmish",
+  "district",
+  "kasbah",
+  "piazza",
+  "drift",
+  "glitch",
+  "gauntlet"
+]);
+
 async function loadGameData() {
   if (gameDataCache) return gameDataCache;
 
@@ -49,7 +64,15 @@ async function loadGameData() {
     }));
 
   const maps = mapsJson.data
-    .filter((map) => map.displayName && map.splash && map.displayName !== "The Range")
+    .filter((map) => {
+      if (!map.displayName || !map.splash) return false;
+      const normalizedName = map.displayName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+      return !EXCLUDED_MAP_NAMES.has(normalizedName);
+    })
     .map((map) => ({
       name: map.displayName,
       image: map.splash
