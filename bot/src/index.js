@@ -21,6 +21,59 @@ if (!token) {
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const sessions = new Map();
 const SESSION_TIMEOUT_MS = 120 * 60 * 1000;
+let gameDataCache = null;
+
+async function loadGameData() {
+  if (gameDataCache) return gameDataCache;
+
+  const [agentsResponse, mapsResponse] = await Promise.all([
+    fetch("https://valorant-api.com/v1/agents?isPlayableCharacter=true&language=fr-FR"),
+    fetch("https://valorant-api.com/v1/maps?language=fr-FR")
+  ]);
+
+  if (!agentsResponse.ok || !mapsResponse.ok) {
+    throw new Error("Impossible de récupérer les agents et les cartes depuis l'API Valorant.");
+  }
+
+  const [agentsJson, mapsJson] = await Promise.all([
+    agentsResponse.json(),
+    mapsResponse.json()
+  ]);
+
+  const agents = agentsJson.data
+    .filter((agent) => agent.isPlayableCharacter && agent.displayIcon)
+    .map((agent) => ({
+      name: agent.displayName,
+      role: agent.role?.displayName ?? "Rôle inconnu",
+      icon: agent.displayIcon
+    }));
+
+  const maps = mapsJson.data
+    .filter((map) => map.displayName && map.splash && map.displayName !== "The Range")
+    .map((map) => ({
+      name: map.displayName,
+      image: map.splash
+    }));
+
+  if (agents.length < 2 || maps.length === 0) {
+    throw new Error("Les données Valorant reçues sont incomplètes.");
+  }
+
+  gameDataCache = { agents, maps };
+  return gameDataCache;
+}
+
+function assignUniqueAgents(playerIds, agents) {
+  if (agents.length < playerIds.length) {
+    throw new Error("Pas assez d'agents disponibles pour composer cette équipe.");
+  }
+
+  const available = shuffle(agents);
+  return playerIds.map((id, index) => ({
+    id,
+    agent: available[index]
+  }));
+}
 
 function sessionEmbed(session) {
   const participants = [...session.participants.values()]
@@ -95,22 +148,31 @@ function shuffle(items) {
   return result;
 }
 
-function makeTeamsEmbed(session) {
+async function makeTeamsEmbed(session) {
+  const { agents, maps } = await loadGameData();
   const players = shuffle([...session.participants.keys()]);
-  const teamA = players.filter((_, i) => i % 2 === 0);
-  const teamB = players.filter((_, i) => i % 2 === 1);
+  const teamAIds = players.filter((_, i) => i % 2 === 0);
+  const teamBIds = players.filter((_, i) => i % 2 === 1);
+  const teamA = assignUniqueAgents(teamAIds, agents);
+  const teamB = assignUniqueAgents(teamBIds, agents);
+  const selectedMap = maps[Math.floor(Math.random() * maps.length)];
+
   const formatTeam = (team) => team.length
-    ? team.map((id) => `• <@${id}>`).join("\n")
+    ? team.map(({ id, agent }) =>
+        `• <@${id}> — **${agent.name}** (${agent.role}) · [icône](${agent.icon})`
+      ).join("\\n")
     : "—";
 
   return new EmbedBuilder()
     .setColor(0xD83C3E)
-    .setTitle("🎲 Résultat du tirage")
+    .setTitle("🎲 Résultat du tirage Valorant")
+    .setDescription(`🗺️ **Carte : ${selectedMap.name}**`)
     .addFields(
       { name: `🔴 Équipe 1 (${teamA.length})`, value: formatTeam(teamA), inline: true },
       { name: `🔵 Équipe 2 (${teamB.length})`, value: formatTeam(teamB), inline: true }
     )
-    .setFooter({ text: "Les participants restent inscrits pour le prochain tirage." })
+    .setImage(selectedMap.image)
+    .setFooter({ text: "Agents uniques dans chaque équipe · Les participants restent inscrits pour le prochain tirage." })
     .setTimestamp();
 }
 
@@ -171,7 +233,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
 
         scheduleAutoClose(session);
-        await interaction.reply({ embeds: [makeTeamsEmbed(session)] });
+        await interaction.deferReply();
+        const resultEmbed = await makeTeamsEmbed(session);
+        await interaction.editReply({ embeds: [resultEmbed] });
         return;
       }
 
