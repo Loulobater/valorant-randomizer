@@ -160,7 +160,7 @@ async function makeTeamsEmbed(session) {
   const formatTeam = (team) => team.length
     ? team.map(({ id, agent }) =>
         `• <@${id}> — **${agent.name}** (${agent.role}) · [icône](${agent.icon})`
-      ).join("\\n")
+      ).join("\n")
     : "—";
 
   return new EmbedBuilder()
