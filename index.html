@@ -243,10 +243,17 @@ async function refreshAuthUI(){
  $('discordLogin').dataset.connected=user?'true':'false';
  if(user)await handleSignedInUser(user);
 }
+function getDiscordUserId(user){
+ const identity=(user.identities||[]).find(item=>item.provider==='discord');
+ const id=identity?.identity_data?.sub||identity?.identity_data?.id||user.user_metadata?.sub||user.user_metadata?.provider_id;
+ return id?String(id):null;
+}
 async function handleSignedInUser(user){
  if(handlingAuthUserId===user.id)return;
  handlingAuthUserId=user.id;
  try{
+  const discordUserId=getDiscordUserId(user);
+  if(!discordUserId)throw new Error("Identifiant Discord introuvable dans le compte connecté. Déconnecte-toi puis reconnecte-toi avec Discord.");
   const {data:remote,error}=await supabaseClient.from('player_profiles').select('*').eq('user_id',user.id).maybeSingle();
   if(error)throw error;
   let player=players.find(p=>p.supabaseUserId===user.id);
@@ -261,12 +268,15 @@ async function handleSignedInUser(user){
    player.dislikedAgents=Array.isArray(remote.disliked_agents)?remote.disliked_agents:[];
    player.preferredRoles=Array.isArray(remote.preferred_roles)?remote.preferred_roles:[];
    player.supabaseUserId=user.id;
+   player.discordUserId=discordUserId;
+   await syncPlayerProfile(player,user.id,discordUserId);
    save(false);renderPlayers();
    $('authStatus').textContent='Profil synchronisé : '+player.name;
    return;
   }
   if(player){
-   await syncPlayerProfile(player,user.id);
+   player.discordUserId=discordUserId;
+   await syncPlayerProfile(player,user.id,discordUserId);
    $('authStatus').textContent='Profil lié : '+player.name;
    return;
   }
@@ -283,7 +293,8 @@ async function handleSignedInUser(user){
   if(!Number.isInteger(index)||index<0||index>=available.length){alert('Numéro invalide. Tu pourras recommencer en actualisant la page.');$('authStatus').textContent='Profil non associé';return;}
   player=available[index];
   player.supabaseUserId=user.id;
-  await syncPlayerProfile(player,user.id);
+  player.discordUserId=discordUserId;
+  await syncPlayerProfile(player,user.id,discordUserId);
   save(false);renderPlayers();
   $('authStatus').textContent='Profil lié : '+player.name;
  }catch(error){
@@ -292,9 +303,12 @@ async function handleSignedInUser(user){
   alert('Impossible de synchroniser le profil : '+error.message);
  }finally{handlingAuthUserId=null;}
 }
-async function syncPlayerProfile(player,userId){
+async function syncPlayerProfile(player,userId,discordUserId){
+ const resolvedDiscordId=discordUserId||player.discordUserId;
+ if(!resolvedDiscordId)throw new Error("Identifiant Discord manquant pour ce profil.");
  const {error}=await supabaseClient.from('player_profiles').upsert({
   user_id:userId,
+  discord_user_id:resolvedDiscordId,
   display_name:player.name,
   owned_agents:Array.isArray(player.agents)?player.agents:[],
   favorite_agents:Array.isArray(player.favoriteAgents)?player.favoriteAgents:[],
@@ -308,7 +322,7 @@ async function syncLinkedProfile(){
  if(!session?.user)return;
  const player=players.find(p=>p.supabaseUserId===session.user.id);
  if(!player)return;
- try{await syncPlayerProfile(player,session.user.id);}
+ try{await syncPlayerProfile(player,session.user.id,getDiscordUserId(session.user));}
  catch(error){console.error('Automatic profile sync failed:',error);$('authStatus').textContent='Erreur de sauvegarde du profil';}
 }
 $('discordLogin').onclick=async()=>{
