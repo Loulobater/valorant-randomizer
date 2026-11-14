@@ -232,6 +232,7 @@ const ROLE_ORDER=['Duelliste','Initiateur','Contrôleur','Sentinelle'];
 let agents=[],maps=[],weapons=[],players=[],selectedMaps=new Set(),hasSavedMapSelection=false,mode='custom',drawStyle='fun',weaponRestrictionEnabled=false,weaponChance=25,lastResult=null,editingPlayer=null,roleFilter='Tous',rolling=false;
 let agentHistory={},mapHistory=[],matchHistory=[],weaponDrawCounts={},agentMemoryLimit=5,mapMemoryLimit=5;
 let tournamentPlayers=[],tournament=null,tournamentAgentHistory={},tournamentMapHistory=[];
+let profileSyncTimer=null,handlingAuthUserId=null;
 const $=id=>document.getElementById(id);
 
 async function refreshAuthUI(){
@@ -240,6 +241,75 @@ async function refreshAuthUI(){
  $('authStatus').textContent=user?(user.user_metadata?.global_name||user.user_metadata?.full_name||user.user_metadata?.name||'Connecté à Discord'):'Non connecté';
  $('discordLogin').textContent=user?'Se déconnecter':'Se connecter avec Discord';
  $('discordLogin').dataset.connected=user?'true':'false';
+ if(user)await handleSignedInUser(user);
+}
+async function handleSignedInUser(user){
+ if(handlingAuthUserId===user.id)return;
+ handlingAuthUserId=user.id;
+ try{
+  const {data:remote,error}=await supabaseClient.from('player_profiles').select('*').eq('user_id',user.id).maybeSingle();
+  if(error)throw error;
+  let player=players.find(p=>p.supabaseUserId===user.id);
+  if(remote){
+   if(!player){
+    player={id:'supabase-'+user.id,name:remote.display_name||user.user_metadata?.global_name||user.user_metadata?.name||'Joueur Discord',active:true,agents:[],supabaseUserId:user.id};
+    players.push(player);
+   }
+   player.name=remote.display_name||player.name;
+   player.agents=Array.isArray(remote.owned_agents)?remote.owned_agents:[];
+   player.favoriteAgents=Array.isArray(remote.favorite_agents)?remote.favorite_agents:[];
+   player.dislikedAgents=Array.isArray(remote.disliked_agents)?remote.disliked_agents:[];
+   player.preferredRoles=Array.isArray(remote.preferred_roles)?remote.preferred_roles:[];
+   player.supabaseUserId=user.id;
+   save(false);renderPlayers();
+   $('authStatus').textContent='Profil synchronisé : '+player.name;
+   return;
+  }
+  if(player){
+   await syncPlayerProfile(player,user.id);
+   $('authStatus').textContent='Profil lié : '+player.name;
+   return;
+  }
+  const available=players.filter(p=>!p.supabaseUserId);
+  if(!available.length){
+   $('authStatus').textContent='Ajoute d’abord ton pseudo dans la liste des joueurs.';
+   alert('Aucun profil disponible. Ajoute ton pseudo dans la liste des joueurs, puis reconnecte-toi à Discord.');
+   return;
+  }
+  const choices=available.map((p,i)=>(i+1)+'. '+p.name).join('\n');
+  const answer=prompt('Quel profil veux-tu associer à ton compte Discord ?\n\n'+choices+'\n\nSaisis le numéro correspondant :');
+  if(answer===null){$('authStatus').textContent='Connexion active — profil non associé';return;}
+  const index=Number(answer)-1;
+  if(!Number.isInteger(index)||index<0||index>=available.length){alert('Numéro invalide. Tu pourras recommencer en actualisant la page.');$('authStatus').textContent='Profil non associé';return;}
+  player=available[index];
+  player.supabaseUserId=user.id;
+  await syncPlayerProfile(player,user.id);
+  save(false);renderPlayers();
+  $('authStatus').textContent='Profil lié : '+player.name;
+ }catch(error){
+  console.error('Profile sync error:',error);
+  $('authStatus').textContent='Erreur de synchronisation';
+  alert('Impossible de synchroniser le profil : '+error.message);
+ }finally{handlingAuthUserId=null;}
+}
+async function syncPlayerProfile(player,userId){
+ const {error}=await supabaseClient.from('player_profiles').upsert({
+  user_id:userId,
+  display_name:player.name,
+  owned_agents:Array.isArray(player.agents)?player.agents:[],
+  favorite_agents:Array.isArray(player.favoriteAgents)?player.favoriteAgents:[],
+  disliked_agents:Array.isArray(player.dislikedAgents)?player.dislikedAgents:[],
+  preferred_roles:Array.isArray(player.preferredRoles)?player.preferredRoles:[]
+ },{onConflict:'user_id'});
+ if(error)throw error;
+}
+async function syncLinkedProfile(){
+ const {data:{session}}=await supabaseClient.auth.getSession();
+ if(!session?.user)return;
+ const player=players.find(p=>p.supabaseUserId===session.user.id);
+ if(!player)return;
+ try{await syncPlayerProfile(player,session.user.id);}
+ catch(error){console.error('Automatic profile sync failed:',error);$('authStatus').textContent='Erreur de sauvegarde du profil';}
 }
 $('discordLogin').onclick=async()=>{
  $('discordLogin').disabled=true;
@@ -247,6 +317,7 @@ $('discordLogin').onclick=async()=>{
   if($('discordLogin').dataset.connected==='true'){
    const {error}=await supabaseClient.auth.signOut();
    if(error)throw error;
+   handlingAuthUserId=null;
    await refreshAuthUI();
   }else{
    const {error}=await supabaseClient.auth.signInWithOAuth({provider:'discord',options:{redirectTo:window.location.origin+window.location.pathname}});
@@ -255,9 +326,12 @@ $('discordLogin').onclick=async()=>{
  }catch(error){alert('Erreur de connexion Discord : '+error.message);}
  finally{$('discordLogin').disabled=false;}
 };
-supabaseClient.auth.onAuthStateChange(()=>{refreshAuthUI();});
+supabaseClient.auth.onAuthStateChange((event,session)=>{
+ if(event==='SIGNED_OUT'){handlingAuthUserId=null;refreshAuthUI();}
+ else if(session?.user)refreshAuthUI();
+});
 
-function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,weaponChance,agentHistory,mapHistory,matchHistory,weaponDrawCounts,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));}
+function save(sync=true){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,weaponChance,agentHistory,mapHistory,matchHistory,weaponDrawCounts,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));if(sync){clearTimeout(profileSyncTimer);profileSyncTimer=setTimeout(syncLinkedProfile,500);}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];weaponDrawCounts=d.weaponDrawCounts&&typeof d.weaponDrawCounts==='object'&&!Array.isArray(d.weaponDrawCounts)?d.weaponDrawCounts:{};agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';weaponRestrictionEnabled=d.weaponRestrictionEnabled===true;weaponChance=Number.isFinite(Number(d.weaponChance))?Math.max(0,Math.min(100,Number(d.weaponChance))):25;players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[],dislikedAgents:Array.isArray(p.dislikedAgents)?p.dislikedAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
 function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
 function playable(a){return a.isPlayableCharacter!==false && a.role && a.displayIcon}
