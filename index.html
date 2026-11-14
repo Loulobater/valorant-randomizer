@@ -164,10 +164,11 @@ button.cyan,.preference-roles button.selected{background:linear-gradient(135deg,
 .footer{max-width:1800px;margin:10px auto 0;padding-top:14px;border-top:1px solid #ffffff10;letter-spacing:.5px}
 @media(max-width:700px){header{padding:23px 18px 18px}.stats{align-self:stretch}.app-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:12px 15px 0}.app-tab{width:100%;min-width:0}.hero{min-height:220px}.hero-copy{padding:18px}.panel-head{padding:16px}.map-tile{height:70px}}
 
+.header-right{display:flex;align-items:center;gap:18px}.auth-area{display:flex;align-items:center;gap:10px}.auth-area span{font:11px Consolas,monospace;color:var(--muted)}.discord-login{background:#5865f2;border-color:#5865f2;color:#fff;font-size:12px}.discord-login:hover{background:#4752c4}@media(max-width:700px){header{align-items:flex-start;flex-direction:column}.header-right{width:100%;justify-content:space-between;flex-wrap:wrap}.auth-area{flex-wrap:wrap}}
 </style>
 </head>
 <body>
-<header><div><div class="kicker">PROTOCOLE // TIRAGE ALÉATOIRE</div><div class="brand">ROULETTE<span>AGENT</span> VALORANT</div></div><div class="stats"><span id="agentStat">AGENTS —</span> &nbsp; <span id="mapStat">CARTES —</span></div></header>
+<header><div><div class="kicker">PROTOCOLE // TIRAGE ALÉATOIRE</div><div class="brand">ROULETTE<span>AGENT</span> VALORANT</div></div><div class="header-right"><div class="stats"><span id="agentStat">AGENTS —</span> &nbsp; <span id="mapStat">CARTES —</span></div><div class="auth-area"><span id="authStatus">Non connecté</span><button id="discordLogin" class="discord-login">Se connecter avec Discord</button></div></div></header>
 <nav class="app-tabs" aria-label="Navigation principale">
  <button class="app-tab active" data-page="roulette">🎯 ROULETTE</button>
  <button class="app-tab" data-page="history">▤ HISTORIQUE</button>
@@ -219,7 +220,11 @@ button.cyan,.preference-roles button.selected{background:linear-gradient(135deg,
 </section></section>
 <div class="footer">FAN PROJECT // DONNÉES DE JEU FOURNIES PAR VALORANT-API.COM · NON AFFILIÉ À RIOT GAMES</div>
 <div class="modal" id="agentModal"><div class="dialog"><div class="dialog-head"><div><div class="section-no cyan">ARSENAL // SÉLECTION</div><h2 id="modalTitle">AGENTS DE JOUEUR</h2></div><button id="closeModal">✕ Fermer</button></div><div class="filters" id="roleFilters"></div><div class="preference-box"><div class="preference-title">RÔLES PRÉFÉRÉS · UTILISÉS EN MODE SÉRIEUX</div><div class="preference-roles" id="preferredRoleFilters"></div><div class="draw-style-note">Les agents préférés sont favorisés en mode Sérieux. Les agents avec un pouce rouge sont exclus de tous les tirages, même en mode Fun.</div></div><div class="filters"><button id="allAgents">Tous</button><button id="noAgents">Aucun</button></div><div class="draw-style-note" style="margin:8px 0">Clique sur un agent pour l'ajouter ou le retirer de ta sélection. Utilise l’étoile pour tes favoris et le pouce rouge pour exclure un agent.</div><div class="agent-grid" id="agentGrid"></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL='https://vpokmzzhcuuqldokbwui.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_T-YCes262naZGA2WnHy_kg_EKdCyGtj';
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const API='https://valorant-api.com/v1';
 const STORAGE='valorant-randomizer-v1';
 const DEFAULT_MAPS=['Abyss','Ascent','Bind','Breeze','Corrode','Fracture','Haven','Icebox','Lotus','Pearl','Split','Summit','Sunset'];
@@ -228,6 +233,30 @@ let agents=[],maps=[],weapons=[],players=[],selectedMaps=new Set(),hasSavedMapSe
 let agentHistory={},mapHistory=[],matchHistory=[],weaponDrawCounts={},agentMemoryLimit=5,mapMemoryLimit=5;
 let tournamentPlayers=[],tournament=null,tournamentAgentHistory={},tournamentMapHistory=[];
 const $=id=>document.getElementById(id);
+
+async function refreshAuthUI(){
+ const {data:{session}}=await supabaseClient.auth.getSession();
+ const user=session?.user;
+ $('authStatus').textContent=user?(user.user_metadata?.global_name||user.user_metadata?.full_name||user.user_metadata?.name||'Connecté à Discord'):'Non connecté';
+ $('discordLogin').textContent=user?'Se déconnecter':'Se connecter avec Discord';
+ $('discordLogin').dataset.connected=user?'true':'false';
+}
+$('discordLogin').onclick=async()=>{
+ $('discordLogin').disabled=true;
+ try{
+  if($('discordLogin').dataset.connected==='true'){
+   const {error}=await supabaseClient.auth.signOut();
+   if(error)throw error;
+   await refreshAuthUI();
+  }else{
+   const {error}=await supabaseClient.auth.signInWithOAuth({provider:'discord',options:{redirectTo:window.location.origin+window.location.pathname}});
+   if(error)throw error;
+  }
+ }catch(error){alert('Erreur de connexion Discord : '+error.message);}
+ finally{$('discordLogin').disabled=false;}
+};
+supabaseClient.auth.onAuthStateChange(()=>{refreshAuthUI();});
+
 function save(){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,weaponChance,agentHistory,mapHistory,matchHistory,weaponDrawCounts,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');players=Array.isArray(d.players)?d.players:[];hasSavedMapSelection=Array.isArray(d.selectedMaps);selectedMaps=new Set(d.selectedMaps||[]);agentHistory=d.agentHistory&&typeof d.agentHistory==='object'?d.agentHistory:{};mapHistory=Array.isArray(d.mapHistory)?d.mapHistory:[];matchHistory=Array.isArray(d.matchHistory)?d.matchHistory:[];weaponDrawCounts=d.weaponDrawCounts&&typeof d.weaponDrawCounts==='object'&&!Array.isArray(d.weaponDrawCounts)?d.weaponDrawCounts:{};agentMemoryLimit=[5,10,15,20].includes(Number(d.agentMemoryLimit))?Number(d.agentMemoryLimit):5;mapMemoryLimit=[5,10,15,20].includes(Number(d.mapMemoryLimit))?Number(d.mapMemoryLimit):5;mode=d.mode==='velocity'?'velocity':'custom';drawStyle=d.drawStyle==='serious'?'serious':'fun';weaponRestrictionEnabled=d.weaponRestrictionEnabled===true;weaponChance=Number.isFinite(Number(d.weaponChance))?Math.max(0,Math.min(100,Number(d.weaponChance))):25;players=players.map(p=>({...p,preferredRoles:Array.isArray(p.preferredRoles)?p.preferredRoles:[],favoriteAgents:Array.isArray(p.favoriteAgents)?p.favoriteAgents:[],dislikedAgents:Array.isArray(p.dislikedAgents)?p.dislikedAgents:[]}));tournamentPlayers=Array.isArray(d.tournamentPlayers)?d.tournamentPlayers:[];tournament=d.tournament&&typeof d.tournament==='object'?d.tournament:null;tournamentAgentHistory=d.tournamentAgentHistory&&typeof d.tournamentAgentHistory==='object'?d.tournamentAgentHistory:{};tournamentMapHistory=Array.isArray(d.tournamentMapHistory)?d.tournamentMapHistory:[];}catch(e){players=[];tournamentPlayers=[];tournament=null;}}
 function roleName(a){const r=a.role?.displayName||'Other';return ({Duelist:'Duelliste',Initiator:'Initiateur',Controller:'Contrôleur',Sentinel:'Sentinelle'})[r]||r}
