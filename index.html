@@ -327,8 +327,8 @@ $('discordLogin').onclick=async()=>{
  finally{$('discordLogin').disabled=false;}
 };
 supabaseClient.auth.onAuthStateChange((event,session)=>{
- if(event==='SIGNED_OUT'){handlingAuthUserId=null;refreshAuthUI();}
- else if(session?.user)refreshAuthUI();
+ if(event==='SIGNED_OUT'){handlingAuthUserId=null;setTimeout(refreshAuthUI,0);}
+ else if(session?.user)setTimeout(refreshAuthUI,0);
 });
 
 function save(sync=true){localStorage.setItem(STORAGE,JSON.stringify({players,selectedMaps:[...selectedMaps],mode,drawStyle,weaponRestrictionEnabled,weaponChance,agentHistory,mapHistory,matchHistory,weaponDrawCounts,agentMemoryLimit,mapMemoryLimit,tournamentPlayers,tournament,tournamentAgentHistory,tournamentMapHistory}));if(sync){clearTimeout(profileSyncTimer);profileSyncTimer=setTimeout(syncLinkedProfile,500);}}
